@@ -51,8 +51,16 @@ If you would rather try LVGL on your own project follow these steps:
 
 .. code:: c
 
-   static lv_color_t buf1[MY_DISP_HOR_RES * MY_DISP_VER_RES / 10];                        /*Declare a buffer for 1/10 screen size*/
-   lv_display_set_buffers(display, buf1, NULL, sizeof(buf1));  /*Initialize the display buffer.*/
+   uint8_t * buf1 = NULL;
+
+   /*Allocate a buffer for 1/10 screen size*/
+   uint32_t buf_size = MY_DISP_HOR_RES * MY_DISP_VER_RES * lv_color_format_get_size(lv_display_get_color_format(display)) / 10;
+   buf1 = lv_malloc(buf_size);
+   if(buf1 == NULL) {
+       LV_LOG_ERROR("display draw buffer malloc failed");
+       return;
+   }
+   lv_display_set_buffers(display, buf1, NULL, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);  /*Initialize the display buffer.*/
 
 -  Implement and register a function which can copy the rendered image
    to an area of your display:
