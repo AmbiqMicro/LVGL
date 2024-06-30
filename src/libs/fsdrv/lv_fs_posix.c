@@ -21,7 +21,7 @@
  *      DEFINES
  *********************/
 
-#if LV_FS_POSIX_LETTER == '\0'
+#if (LV_FS_POSIX_LETTER < 'A') || (LV_FS_POSIX_LETTER > 'Z')
     #error "LV_FS_POSIX_LETTER must be an upper case ASCII letter"
 #endif
 

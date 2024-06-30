@@ -26,6 +26,8 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
+
+static bool lv_fs_path_has_drive(const char * path);
 static const char * lv_fs_get_real_path(const char * path);
 static lv_fs_res_t lv_fs_read_cached(lv_fs_file_t * file_p, void * buf, uint32_t btr, uint32_t * br);
 static lv_fs_res_t lv_fs_write_cached(lv_fs_file_t * file_p, const void * buf, uint32_t btw, uint32_t * bw);
@@ -72,6 +74,10 @@ lv_fs_res_t lv_fs_open(lv_fs_file_t * file_p, const char * path, lv_fs_mode_t mo
     }
 
     char letter = path[0];
+
+    if(!lv_fs_path_has_drive(path) && LV_FS_DEFAULT_DRIVE_LETTER != '\0')
+        letter = LV_FS_DEFAULT_DRIVE_LETTER;
+
     lv_fs_drv_t * drv = lv_fs_get_drv(letter);
 
     if(drv == NULL) {
@@ -494,14 +500,26 @@ const char * lv_fs_get_last(const char * path)
  **********************/
 
 /**
+ * Checks if the path starts with a drive prefix (i.e. "X:...")
+ * @param path path string (E.g. S:/folder/file.txt)
+ * @return true if path has drive letter
+ */
+static bool lv_fs_path_has_drive(const char * path)
+{
+    if(path[0] == '\0') return false;
+
+    return ('A' <= path[0] && path[0] <= 'Z') && path[1] == ':';
+}
+
+/**
  * Skip the driver letter and the possible : after the letter
  * @param path path string (E.g. S:/folder/file.txt)
  * @return pointer to the beginning of the real path (E.g. /folder/file.txt)
  */
 static const char * lv_fs_get_real_path(const char * path)
 {
-    path++; /*Ignore the driver letter*/
-    if(*path == ':') path++;
+    if(lv_fs_path_has_drive(path))
+        path += 2;
 
     return path;
 }
