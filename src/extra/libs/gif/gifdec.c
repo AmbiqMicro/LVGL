@@ -108,11 +108,11 @@ static gd_GIF * gif_open(gd_GIF * gif_base)
     f_gif_read(gif_base, &aspect, 1);
     /* Create gd_GIF Structure. */
 #if LV_COLOR_DEPTH == 32
-    gif = lv_mem_alloc(sizeof(gd_GIF) + 5 * width * height);
+    gif = lv_mem_external_alloc(sizeof(gd_GIF) + 5 * width * height);
 #elif LV_COLOR_DEPTH == 16
-    gif = lv_mem_alloc(sizeof(gd_GIF) + 4 * width * height);
+    gif = lv_mem_external_alloc(sizeof(gd_GIF) + 4 * width * height);
 #elif LV_COLOR_DEPTH == 8 || LV_COLOR_DEPTH == 1
-    gif = lv_mem_alloc(sizeof(gd_GIF) + 3 * width * height);
+    gif = lv_mem_external_alloc(sizeof(gd_GIF) + 3 * width * height);
 #endif
 
     if (!gif) goto fail;
@@ -287,7 +287,7 @@ new_table(int key_size)
 {
     int key;
     int init_bulk = MAX(1 << (key_size + 1), 0x100);
-    Table *table = lv_mem_alloc(sizeof(*table) + sizeof(Entry) * init_bulk);
+    Table *table = lv_mem_external_alloc(sizeof(*table) + sizeof(Entry) * init_bulk);
     if (table) {
         table->bulk = init_bulk;
         table->nentries = (1 << key_size) + 2;

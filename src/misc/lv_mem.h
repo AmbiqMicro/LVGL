@@ -67,11 +67,27 @@ void lv_mem_init(void);
 void lv_mem_deinit(void);
 
 /**
- * Allocate a memory dynamically
+ * Allocate a memory dynamically in TCM or SSRAM
+ * @param size size of the memory to allocate in bytes
+ * @return pointer to the allocated memory
+ * @note this is API will first try to alloca a buffer from TCM,
+ * if the TCM heap space is exhausted, it will try the SSRAM heap.
+ */
+void * lv_mem_alloc(size_t size);
+
+/**
+ * Allocate a memory dynamically in SSRAM
  * @param size size of the memory to allocate in bytes
  * @return pointer to the allocated memory
  */
-void * lv_mem_alloc(size_t size);
+void * lv_mem_ssram_alloc(size_t size);
+
+/**
+ * Allocate a memory dynamically in external memory, for example psram device in MSPI interface.
+ * @param size size of the memory to allocate in bytes
+ * @return pointer to the allocated memory
+ */
+void * lv_mem_external_alloc(size_t size);
 
 /**
  * Free an allocated data
@@ -101,6 +117,39 @@ lv_res_t lv_mem_test(void);
  */
 void lv_mem_monitor(lv_mem_monitor_t * mon_p);
 
+/**
+ * Give information about the work memory of dynamic allocation in SSRAM
+ * @param mon_p pointer to a lv_mem_monitor_t variable,
+ *              the result of the analysis will be stored here
+ */
+void lv_mem_ssram_monitor(lv_mem_monitor_t * mon_p);
+
+/**
+ * Give information about the work memory of dynamic allocation in PSRAM
+ * @param mon_p pointer to a lv_mem_monitor_t variable,
+ *              the result of the analysis will be stored here
+ */
+void lv_mem_external_monitor(lv_mem_monitor_t * mon_p);
+
+/**
+ * Allocate a buf for font glyph
+ * @param size size of the font glyph
+ * @return pointer to the allocated memory
+ * @note if the size is less than 4K bytes, this API will first try to allocate
+ * the buffer by lv_mem_ssram_alloc API, if it is bigger than 4K or lv_mem_ssram_alloc failed, it will
+ * try allocate buffer by lv_mem_external_alloc API.
+ */
+void* lv_mem_font_glyph_alloc(uint32_t size);
+
+/**
+ * Allocate a buf for font info
+ * @param size size of the font glyph
+ * @return pointer to the allocated memory
+ * @note if the size is less than 4K bytes, this API will first try to allocate
+ * the buffer by lv_mem_alloc API, if it is bigger than 4K or lv_mem_alloc failed, it will
+ * try allocate buffer by lv_mem_external_alloc API.
+ */
+void* lv_mem_font_info_alloc(uint32_t size);
 
 /**
  * Get a temporal buffer with the given size.

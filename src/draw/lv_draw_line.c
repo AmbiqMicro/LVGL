@@ -12,6 +12,10 @@
 #include "../core/lv_refr.h"
 #include "../misc/lv_math.h"
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../gpu/lv_gpu_ambiq_nema.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -79,9 +83,16 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_line(const lv_point_t * point1, const lv_poin
     is_common = _lv_area_intersect(&clip_line, &clip_line, clip);
     if(!is_common) return;
 
-    if(point1->y == point2->y) draw_line_hor(point1, point2, &clip_line, dsc);
-    else if(point1->x == point2->x) draw_line_ver(point1, point2, &clip_line, dsc);
-    else draw_line_skew(point1, point2, &clip_line, dsc);
+#if LV_USE_GPU_AMBIQ_NEMA
+    lv_res_t gpu_res = lv_gpu_ambiq_nema_draw_line(point1, point2, &clip_line, dsc);
+
+    if(gpu_res != LV_RES_OK)
+#endif
+    {
+        if(point1->y == point2->y) draw_line_hor(point1, point2, &clip_line, dsc);
+        else if(point1->x == point2->x) draw_line_ver(point1, point2, &clip_line, dsc);
+        else draw_line_skew(point1, point2, &clip_line, dsc);
+    }
 
     if(dsc->round_end || dsc->round_start) {
         lv_draw_rect_dsc_t cir_dsc;
@@ -145,10 +156,13 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_hor(const lv_point_t * point1, const
         _lv_blend_fill(clip, &draw_area,
                        dsc->color, NULL, LV_DRAW_MASK_RES_FULL_COVER, opa,
                        dsc->blend_mode);
+
+        return;
     }
+
 #if LV_DRAW_COMPLEX
     /*If there other mask apply it*/
-    else {
+    {
         lv_disp_t * disp = _lv_refr_get_disp_refreshing();
         lv_disp_draw_buf_t * draw_buf = lv_disp_get_draw_buf(disp);
         const lv_area_t * disp_area = &draw_buf->area;
@@ -178,7 +192,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_hor(const lv_point_t * point1, const
             dash_start = (draw_buf->area.x1 + draw_area.x1) % (dsc->dash_gap + dsc->dash_width);
         }
 
-        lv_opa_t * mask_buf = lv_mem_buf_get(draw_area_w);
+        lv_opa_t * mask_buf = lv_mem_ssram_alloc(draw_area_w);
         int32_t h;
         for(h = draw_area.y1; h <= draw_area.y2; h++) {
             lv_memset_ff(mask_buf, draw_area_w);
@@ -214,7 +228,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_hor(const lv_point_t * point1, const
             fill_area.y1++;
             fill_area.y2++;
         }
-        lv_mem_buf_release(mask_buf);
+        lv_mem_free(mask_buf);
     }
 #endif /*LV_DRAW_COMPLEX*/
 }
@@ -245,11 +259,12 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_ver(const lv_point_t * point1, const
         _lv_blend_fill(clip, &draw_area,
                        dsc->color,  NULL, LV_DRAW_MASK_RES_FULL_COVER, opa,
                        dsc->blend_mode);
+        return;
     }
 
 #if LV_DRAW_COMPLEX
     /*If there other mask apply it*/
-    else {
+    {
         lv_disp_t * disp = _lv_refr_get_disp_refreshing();
         lv_disp_draw_buf_t * draw_buf = lv_disp_get_draw_buf(disp);
         const lv_area_t * disp_area = &draw_buf->area;
@@ -274,7 +289,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_ver(const lv_point_t * point1, const
         fill_area.y1 = draw_area.y1 + disp_area->y1;
         fill_area.y2 = fill_area.y1;
 
-        lv_opa_t * mask_buf = lv_mem_buf_get(draw_area_w);
+        lv_opa_t * mask_buf = lv_mem_ssram_alloc(draw_area_w);
 
         lv_coord_t dash_start = 0;
         if(dashed) {
@@ -309,7 +324,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_ver(const lv_point_t * point1, const
             fill_area.y1++;
             fill_area.y2++;
         }
-        lv_mem_buf_release(mask_buf);
+        lv_mem_free(mask_buf);
     }
 #endif /*LV_DRAW_COMPLEX*/
 }
@@ -428,7 +443,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_skew(const lv_point_t * point1, cons
     int32_t h;
     uint32_t hor_res = (uint32_t)lv_disp_get_hor_res(disp);
     size_t mask_buf_size = LV_MIN(lv_area_get_size(&draw_area), hor_res);
-    lv_opa_t * mask_buf = lv_mem_buf_get(mask_buf_size);
+    lv_opa_t * mask_buf = lv_mem_ssram_alloc(mask_buf_size);
 
     lv_area_t fill_area;
     fill_area.x1 = draw_area.x1 + disp_area->x1;
@@ -474,7 +489,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_line_skew(const lv_point_t * point1, cons
 
     }
 
-    lv_mem_buf_release(mask_buf);
+    lv_mem_free(mask_buf);
 
     lv_draw_mask_free_param(&mask_left_param);
     lv_draw_mask_free_param(&mask_right_param);

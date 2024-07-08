@@ -12,6 +12,9 @@
 #include <stdbool.h>
 #include "../../../core/lv_disp.h"
 #include "../../../core/lv_refr.h"
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../../src/gpu/lv_gpu_ambiq_nema.h"
+#endif
 /*********************
  *      DEFINES
  *********************/
@@ -45,6 +48,12 @@
  */
 uint32_t lv_snapshot_buf_size_needed(lv_obj_t * obj, lv_img_cf_t cf)
 {
+#if LV_USE_GPU_AMBIQ_NEMA
+    if(lv_gpu_ambiq_nema_fb_support_format(cf) != LV_RES_OK)
+    {
+        return 0;
+    }
+#else
     switch(cf) {
         case LV_IMG_CF_TRUE_COLOR_ALPHA:
         case LV_IMG_CF_ALPHA_1BIT:
@@ -55,6 +64,7 @@ uint32_t lv_snapshot_buf_size_needed(lv_obj_t * obj, lv_img_cf_t cf)
         default:
             return 0;
     }
+#endif
 
     lv_obj_update_layout(obj);
 
@@ -65,8 +75,12 @@ uint32_t lv_snapshot_buf_size_needed(lv_obj_t * obj, lv_img_cf_t cf)
     w += ext_size * 2;
     h += ext_size * 2;
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    return lv_gpu_ambiq_nema_fb_size_needed(cf, w, h);
+#else
     uint8_t px_size = lv_img_cf_get_px_size(cf);
     return w * h * ((px_size + 7) >> 3);
+#endif
 }
 
 /** Take snapshot for object with its children, save image info to provided buffer.
@@ -84,6 +98,12 @@ lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * 
     LV_ASSERT(dsc);
     LV_ASSERT(buf);
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    if(lv_gpu_ambiq_nema_fb_support_format(cf) != LV_RES_OK)
+    {
+        return LV_RES_INV;
+    }
+#else
     switch(cf) {
         case LV_IMG_CF_TRUE_COLOR_ALPHA:
         case LV_IMG_CF_ALPHA_1BIT:
@@ -94,6 +114,7 @@ lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * 
         default:
             return LV_RES_INV;
     }
+#endif
 
     if(lv_snapshot_buf_size_needed(obj, cf) > buff_size)
         return LV_RES_INV;
@@ -110,7 +131,10 @@ lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * 
     lv_area_t coords_bkp;
     lv_area_copy(&coords_bkp, &obj->coords);
 
+#if !LV_USE_GPU_AMBIQ_NEMA
+    //This is a slow operation by CPU, we will do it by GPU.
     lv_memset(buf, 0x00, buff_size);
+#endif
     lv_memset_00(dsc, sizeof(lv_img_dsc_t));
 
     /*We are safe to use stack for below variables since disp will be
@@ -125,7 +149,18 @@ lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * 
     driver.draw_buf = &draw_buf;
     driver.hor_res = w;
     driver.ver_res = h;
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    uint32_t user_data[10];
+    //Set the frame buffer structure
+    lv_gpu_ambiq_nema_fb_set(user_data, cf, w, h, buf, buff_size);
+    //Clear the frame buffer
+    lv_gpu_ambiq_nema_fb_clear(user_data);
+    driver.user_data = (void*)user_data;
+
+    //We still need to set this API, it will be regraded as a flag, we will never actually call it.
     lv_disp_drv_use_generic_set_px_cb(&driver, cf);
+#endif
 
     disp = lv_disp_drv_register(&driver);
     if(disp == NULL) {
@@ -183,7 +218,7 @@ lv_img_dsc_t * lv_snapshot_take(lv_obj_t * obj, lv_img_cf_t cf)
 {
     uint32_t buff_size = lv_snapshot_buf_size_needed(obj, cf);
 
-    void * buf = lv_mem_alloc(buff_size);
+    void * buf = lv_mem_external_alloc(buff_size);
     if(buf == NULL) {
         return NULL;
     }

@@ -344,7 +344,7 @@ lv_img_dsc_t * lv_img_buf_alloc(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf)
     }
 
     /*Allocate raw buffer*/
-    dsc->data = lv_mem_alloc(dsc->data_size);
+    dsc->data = lv_mem_external_alloc(dsc->data_size);
     if(dsc->data == NULL) {
         lv_mem_free(dsc);
         return NULL;

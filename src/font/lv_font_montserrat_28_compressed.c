@@ -3240,7 +3240,7 @@ static const lv_font_fmt_txt_dsc_t font_dsc = {
 #else
 static lv_font_fmt_txt_dsc_t font_dsc = {
 #endif
-    .glyph_bitmap = glyph_bitmap,
+    .glyph_bitmap = (uint8_t *)glyph_bitmap,
     .glyph_dsc = glyph_dsc,
     .cmaps = cmaps,
     .kern_dsc = &kern_classes,

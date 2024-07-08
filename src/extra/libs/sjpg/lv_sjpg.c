@@ -177,7 +177,7 @@ static lv_res_t decoder_info( lv_img_decoder_t * decoder, const void * src, lv_i
             header->always_zero = 0;
             header->cf = LV_IMG_CF_RAW;
 
-            uint8_t *workb_temp = lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+            uint8_t *workb_temp = lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
             if(!workb_temp) return LV_RES_INV;
 
             io_source_t io_source_temp;
@@ -246,7 +246,7 @@ static lv_res_t decoder_info( lv_img_decoder_t * decoder, const void * src, lv_i
             lv_fs_res_t res = lv_fs_open(&file , fn, LV_FS_MODE_RD);
             if(res != LV_FS_RES_OK) return 78;
 
-            uint8_t *workb_temp = lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+            uint8_t *workb_temp = lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
             if(!workb_temp) {
                 lv_fs_close(&file);
                 return LV_RES_INV;
@@ -344,7 +344,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
         uint8_t *data;
         SJPEG* sjpeg = ( SJPEG* ) dsc->user_data;
         if( sjpeg == NULL ) {
-            sjpeg =  lv_mem_alloc( sizeof( SJPEG ) );
+            sjpeg =  lv_mem_ssram_alloc( sizeof( SJPEG ) );
             if( !sjpeg ) return LV_RES_INV;
 
             memset(sjpeg, 0, sizeof(SJPEG));
@@ -371,7 +371,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
             sjpeg->sjpeg_single_frame_height = *data++;
             sjpeg->sjpeg_single_frame_height |= *data++ << 8;
 
-            sjpeg->frame_base_array = lv_mem_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
+            sjpeg->frame_base_array = lv_mem_ssram_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
             if( ! sjpeg->frame_base_array ) {
                 lv_sjpg_cleanup( sjpeg );
                 sjpeg = NULL;
@@ -389,7 +389,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->frame_base_array[i] = sjpeg->frame_base_array[i-1] + offset;
             }
             sjpeg->sjpeg_cache_frame_index = -1;
-            sjpeg->frame_cache = (void *)lv_mem_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3/*2*/ );
+            sjpeg->frame_cache = (void *)lv_mem_ssram_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3/*2*/ );
             if( ! sjpeg->frame_cache ) {
                 lv_sjpg_cleanup( sjpeg );
                 sjpeg = NULL;
@@ -397,7 +397,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
             }
             sjpeg->io.img_cache_buff = sjpeg->frame_cache;
             sjpeg->io.img_cache_x_res = sjpeg->sjpeg_x_res;
-            sjpeg->workb =   lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+            sjpeg->workb =   lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
             if( ! sjpeg->workb ) {
                 lv_sjpg_cleanup( sjpeg );
                 sjpeg = NULL;
@@ -418,7 +418,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
 
         else if( is_jpg( sjpeg->sjpeg_data ) == true ) {
 
-            uint8_t *workb_temp = lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+            uint8_t *workb_temp = lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
             if( ! workb_temp ) {
                 lv_sjpg_cleanup( sjpeg );
                 sjpeg = NULL;
@@ -441,7 +441,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->sjpeg_total_frames = 1;
                 sjpeg->sjpeg_single_frame_height = jd_tmp.height;
 
-                sjpeg->frame_base_array = lv_mem_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
+                sjpeg->frame_base_array = lv_mem_ssram_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
                 if( ! sjpeg->frame_base_array ) {
                     lv_sjpg_cleanup( sjpeg );
                     sjpeg = NULL;
@@ -453,7 +453,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->frame_base_array[0] = img_frame_base;
 
                 sjpeg->sjpeg_cache_frame_index = -1;
-                sjpeg->frame_cache = (void *)lv_mem_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
+                sjpeg->frame_cache = (void *)lv_mem_ssram_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
                 if( ! sjpeg->frame_cache ) {
                     lv_sjpg_cleanup( sjpeg );
                     sjpeg = NULL;
@@ -462,7 +462,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
 
                 sjpeg->io.img_cache_buff = sjpeg->frame_cache;
                 sjpeg->io.img_cache_x_res = sjpeg->sjpeg_x_res;
-                sjpeg->workb =   lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+                sjpeg->workb =   lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
                 if( ! sjpeg->workb ) {
                     lv_sjpg_cleanup( sjpeg );
                     sjpeg = NULL;
@@ -547,8 +547,8 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->sjpeg_single_frame_height = *data++;
                 sjpeg->sjpeg_single_frame_height |= *data++ << 8;
 
-                sjpeg->frame_base_array = NULL;//lv_mem_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
-                sjpeg->frame_base_offset = lv_mem_alloc( sizeof(int) * sjpeg->sjpeg_total_frames );
+                sjpeg->frame_base_array = NULL;//lv_mem_ssram_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
+                sjpeg->frame_base_offset = lv_mem_ssram_alloc( sizeof(int) * sjpeg->sjpeg_total_frames );
                 if( ! sjpeg->frame_base_offset ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);
@@ -571,7 +571,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 }
 
                 sjpeg->sjpeg_cache_frame_index = -1; //INVALID AT BEGINNING for a forced compare mismatch at first time.
-                sjpeg->frame_cache = (void *)lv_mem_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
+                sjpeg->frame_cache = (void *)lv_mem_ssram_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
                 if( ! sjpeg->frame_cache ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);
@@ -579,7 +579,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 }
                 sjpeg->io.img_cache_buff = sjpeg->frame_cache;
                 sjpeg->io.img_cache_x_res = sjpeg->sjpeg_x_res;
-                sjpeg->workb =   lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+                sjpeg->workb =   lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
                 if( ! sjpeg->workb ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);
@@ -621,7 +621,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->sjpeg_data_size = ( (lv_img_dsc_t *)(dsc->src) )->data_size;
             }
 
-            uint8_t *workb_temp = lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+            uint8_t *workb_temp = lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
             if( ! workb_temp ) {
                 lv_fs_close(&lv_file);
                 lv_sjpg_cleanup(sjpeg);
@@ -648,7 +648,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->sjpeg_single_frame_height = jd_tmp.height;
 
                 sjpeg->frame_base_array = NULL;
-                sjpeg->frame_base_offset =  lv_mem_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
+                sjpeg->frame_base_offset =  lv_mem_ssram_alloc( sizeof(uint8_t *) * sjpeg->sjpeg_total_frames );
                 if( ! sjpeg->frame_base_offset ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);
@@ -659,7 +659,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
                 sjpeg->frame_base_offset[0] = img_frame_start_offset;
 
                 sjpeg->sjpeg_cache_frame_index = -1;
-                sjpeg->frame_cache = (void *)lv_mem_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
+                sjpeg->frame_cache = (void *)lv_mem_ssram_alloc( sjpeg->sjpeg_x_res * sjpeg->sjpeg_single_frame_height * 3 );
                 if( ! sjpeg->frame_cache ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);
@@ -668,7 +668,7 @@ static lv_res_t decoder_open( lv_img_decoder_t * decoder, lv_img_decoder_dsc_t *
 
                 sjpeg->io.img_cache_buff = sjpeg->frame_cache;
                 sjpeg->io.img_cache_x_res = sjpeg->sjpeg_x_res;
-                sjpeg->workb =   lv_mem_alloc( TJPGD_WORKBUFF_SIZE );
+                sjpeg->workb =   lv_mem_ssram_alloc( TJPGD_WORKBUFF_SIZE );
                 if( ! sjpeg->workb ) {
                     lv_fs_close(&lv_file);
                     lv_sjpg_cleanup(sjpeg);

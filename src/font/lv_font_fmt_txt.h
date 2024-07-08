@@ -159,10 +159,10 @@ typedef struct {
 /*Describe store additional data for fonts*/
 typedef struct {
     /*The bitmaps of all glyphs*/
-    const uint8_t * glyph_bitmap;
+    uint8_t * glyph_bitmap;
 
     /*Describe the glyphs*/
-    const lv_font_fmt_txt_glyph_dsc_t * glyph_dsc;
+    lv_font_fmt_txt_glyph_dsc_t * glyph_dsc;
 
     /*Map the glyphs to Unicode characters.
      *Array of `lv_font_cmap_fmt_txt_t` variables*/

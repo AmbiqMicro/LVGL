@@ -21,7 +21,7 @@
  *----------------*/
 
 /*Store the image of the glyphs*/
-static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
+static LV_ATTRIBUTE_LARGE_CONST uint8_t glyph_bitmap[] = {
     /* U+0020 " " */
 
     /* U+0021 "!" */
@@ -4465,7 +4465,7 @@ static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
  *  GLYPH DESCRIPTION
  *--------------------*/
 
-static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
+static lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 0, .adv_w = 0, .box_w = 0, .box_h = 0, .ofs_x = 0, .ofs_y = 0} /* id = 0 reserved */,
     {.bitmap_index = 0, .adv_w = 121, .box_w = 0, .box_h = 0, .ofs_x = 0, .ofs_y = 0},
     {.bitmap_index = 0, .adv_w = 120, .box_w = 5, .box_h = 20, .ofs_x = 1, .ofs_y = 0},
@@ -5106,11 +5106,11 @@ static const lv_font_fmt_txt_kern_classes_t kern_classes =
 #if LV_VERSION_CHECK(8, 0, 0)
 /*Store all the custom data of the font*/
 static  lv_font_fmt_txt_glyph_cache_t cache;
-static const lv_font_fmt_txt_dsc_t font_dsc = {
+static  lv_font_fmt_txt_dsc_t font_dsc = {
 #else
 static lv_font_fmt_txt_dsc_t font_dsc = {
 #endif
-    .glyph_bitmap = glyph_bitmap,
+    .glyph_bitmap = (uint8_t *)glyph_bitmap,
     .glyph_dsc = glyph_dsc,
     .cmaps = cmaps,
     .kern_dsc = &kern_classes,
@@ -5131,7 +5131,7 @@ static lv_font_fmt_txt_dsc_t font_dsc = {
 
 /*Initialize a public general font descriptor*/
 #if LV_VERSION_CHECK(8, 0, 0)
-const lv_font_t lv_font_montserrat_28 = {
+lv_font_t lv_font_montserrat_28 = {
 #else
 lv_font_t lv_font_montserrat_28 = {
 #endif

@@ -13,6 +13,10 @@
 #include "../misc/lv_log.h"
 #include "../misc/lv_mem.h"
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../gpu/lv_gpu_ambiq_nema.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -74,6 +78,14 @@ void lv_draw_arc(lv_coord_t center_x, lv_coord_t center_y, uint16_t radius,  uin
     if(dsc->opa <= LV_OPA_MIN) return;
     if(dsc->width == 0) return;
     if(start_angle == end_angle) return;
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    lv_res_t gpu_res = lv_gpu_ambiq_nema_draw_arc(center_x, center_y, radius, start_angle, end_angle, clip_area, dsc);
+    if(gpu_res == LV_RES_OK)
+    {
+        return;
+    }
+#endif
 
     lv_coord_t width = dsc->width;
     if(width > radius) width = radius;

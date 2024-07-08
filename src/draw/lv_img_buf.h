@@ -85,16 +85,16 @@ enum {
     LV_IMG_CF_RESERVED_20,              /**< Reserved for further use.*/
     LV_IMG_CF_RESERVED_21,              /**< Reserved for further use.*/
     LV_IMG_CF_RESERVED_22,              /**< Reserved for further use.*/
-    LV_IMG_CF_RESERVED_23,              /**< Reserved for further use.*/
+    LV_IMG_CF_AMBIQ_TSVG,               /**< TSVG format texture.*/
 
-    LV_IMG_CF_USER_ENCODED_0,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_1,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_2,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_3,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_4,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_5,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_6,          /**< User holder encoding format.*/
-    LV_IMG_CF_USER_ENCODED_7,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_ARGB8888,   //LV_IMG_CF_USER_ENCODED_0,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_BGRA8888,   //LV_IMG_CF_USER_ENCODED_1,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_RGB565,     //LV_IMG_CF_USER_ENCODED_2,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_TSC6,       //LV_IMG_CF_USER_ENCODED_3,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_TSC4,       //LV_IMG_CF_USER_ENCODED_4,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_TSC6A,       //LV_IMG_CF_USER_ENCODED_5,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_RGB24,      //LV_IMG_CF_USER_ENCODED_6,          /**< User holder encoding format.*/
+    LV_IMG_CF_AMBIQ_RGBA4444,   //LV_IMG_CF_USER_ENCODED_7,          /**< User holder encoding format.*/
 };
 typedef uint8_t lv_img_cf_t;
 
@@ -110,7 +110,8 @@ typedef struct {
 
     uint32_t h : 11; /*Height of the image map*/
     uint32_t w : 11; /*Width of the image map*/
-    uint32_t reserved : 2; /*Reserved to be used later*/
+    uint32_t reserved : 1; /*Reserved to be used later*/
+    uint32_t morton_order : 1; /* morton order enabled or not*/
     uint32_t always_zero : 3; /*It the upper bits of the first byte. Always zero to look like a
                                  non-printable character*/
     uint32_t cf : 5;          /*Color format: See `lv_img_color_format_t`*/
@@ -122,8 +123,9 @@ typedef struct {
     uint32_t cf : 5;          /*Color format: See `lv_img_color_format_t`*/
     uint32_t always_zero : 3; /*It the upper bits of the first byte. Always zero to look like a
                                  non-printable character*/
+    uint32_t morton_order : 1; /* morton order enabled or not*/
 
-    uint32_t reserved : 2; /*Reserved to be used later*/
+    uint32_t reserved : 1; /*Reserved to be used later*/
 
     uint32_t w : 11; /*Width of the image map*/
     uint32_t h : 11; /*Height of the image map*/

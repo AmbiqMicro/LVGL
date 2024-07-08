@@ -18,7 +18,11 @@
     #include "../gpu/lv_gpu_nxp_vglite.h"
 #elif LV_USE_GPU_STM32_DMA2D
     #include "../gpu/lv_gpu_stm32_dma2d.h"
+#elif LV_USE_GPU_AMBIQ_NEMA || defined(LV_AMBIQ_FB_REFRESH_CPU_ONLY)
+    #include "../gpu/lv_gpu_ambiq_nema.h"
 #endif
+
+#include "lv_ambiq_misc.h"
 
 /*********************
  *      DEFINES
@@ -139,7 +143,11 @@ LV_ATTRIBUTE_FAST_MEM void _lv_blend_fill(const lv_area_t * clip_area, const lv_
     const lv_area_t * disp_area = &draw_buf->area;
     lv_color_t * disp_buf = draw_buf->buf_act;
 
+#if (LV_USE_GPU_AMBIQ_NEMA==0)
+    //Ambiq NemGFX will handle the sync operation inside the lv_gpu_ambiq_nema_fill, 
+    //so no sync operation is needed here.
     if(disp->driver->gpu_wait_cb) disp->driver->gpu_wait_cb(disp->driver);
+#endif
 
     /*Get clipped fill area which is the real draw area.
      *It is always the same or inside `fill_area`*/
@@ -157,15 +165,68 @@ LV_ATTRIBUTE_FAST_MEM void _lv_blend_fill(const lv_area_t * clip_area, const lv_
         for(i = 0; i < mask_w; i++)  mask[i] = mask[i] > 128 ? LV_OPA_COVER : LV_OPA_TRANSP;
     }
 
-    if(disp->driver->set_px_cb) {
+    if(disp->driver->set_px_cb && (disp->driver->user_data == NULL)) {
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         fill_set_px(disp_area, disp_buf, &draw_area, color, opa, mask, mask_res);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
     }
     else if(mode == LV_BLEND_MODE_NORMAL) {
+#if LV_USE_GPU_AMBIQ_NEMA
+
+        // Flush the mask area. 
+        // The mask is written by CPU and read by GPU, so we need to clean cache to keep their memory view sync.  
+        lv_ambiq_cache_clean_mask_buffer(mask, &draw_area); 
+
+        if(lv_gpu_ambiq_nema_fill(disp_area, disp_buf, &draw_area, color, opa, mask, mask_res) != LV_RES_OK)
+        {
+            // This draw buffer is not a GPU-only buffer.
+            LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+            //Sync GPU and CPU.
+            if(disp->driver->gpu_wait_cb) 
+                disp->driver->gpu_wait_cb(disp->driver);
+
+            // Invalid the Dcache
+            lv_ambiq_cache_invalid_draw_buffer(disp);
+
+            //fill with CPU.
+            fill_normal(disp_area, disp_buf, &draw_area, color, opa, mask, mask_res);
+
+            // Clean the Dcache
+            lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
+        }
+#else
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         fill_normal(disp_area, disp_buf, &draw_area, color, opa, mask, mask_res);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
+#endif
     }
 #if LV_DRAW_COMPLEX
     else {
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         fill_blended(disp_area, disp_buf, &draw_area, color, opa, mask, mask_res, mode);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
     }
 #endif
 }
@@ -204,7 +265,11 @@ LV_ATTRIBUTE_FAST_MEM void _lv_blend_map(const lv_area_t * clip_area, const lv_a
     const lv_area_t * disp_area = &draw_buf->area;
     lv_color_t * disp_buf = draw_buf->buf_act;
 
+#if (LV_USE_GPU_AMBIQ_NEMA==0)
+    //Ambiq NemGFX will handle the sync operation inside the lv_gpu_ambiq_nema_map, 
+    //so no sync operation is needed here.
     if(disp->driver->gpu_wait_cb) disp->driver->gpu_wait_cb(disp->driver);
+#endif
 
     /*Now `draw_area` has absolute coordinates.
      *Make it relative to `disp_area` to simplify draw to `disp_buf`*/
@@ -219,15 +284,73 @@ LV_ATTRIBUTE_FAST_MEM void _lv_blend_map(const lv_area_t * clip_area, const lv_a
         int32_t i;
         for(i = 0; i < mask_w; i++)  mask[i] = mask[i] > 128 ? LV_OPA_COVER : LV_OPA_TRANSP;
     }
-    if(disp->driver->set_px_cb) {
+    if(disp->driver->set_px_cb && (disp->driver->user_data == NULL)) {
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         map_set_px(disp_area, disp_buf, &draw_area, map_area, map_buf, opa, mask, mask_res);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
     }
     else if(mode == LV_BLEND_MODE_NORMAL) {
+
+#if LV_USE_GPU_AMBIQ_NEMA
+        
+        // Flush the mask area. 
+        // The mask is written by CPU and read by GPU, so we need to clean cache to keep their memory view sync.  
+        lv_ambiq_cache_clean_mask_buffer(mask, map_area);
+
+        // Flush the map area. 
+        // The map buffer may be written by CPU and read by GPU, so we need to clean cache to keep their memory view sync.  
+        lv_ambiq_cache_clean_map_buffer(map_buf, map_area); 
+
+        if(lv_gpu_ambiq_nema_map(disp_area, disp_buf, &draw_area, map_area, map_buf, opa, mask, mask_res) != LV_RES_OK)
+        {
+            //Sync GPU and CPU.
+            if(disp->driver->gpu_wait_cb) 
+                disp->driver->gpu_wait_cb(disp->driver);
+
+            // This draw buffer is not a GPU-only buffer.
+            LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+            // Invalid the Dcache
+            lv_ambiq_cache_invalid_draw_buffer(disp);
+
+            //fill with CPU.
+            map_normal(disp_area, disp_buf, &draw_area, map_area, map_buf, opa, mask, mask_res);
+
+            // Clean the Dcache
+            lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
+        }
+#else
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         map_normal(disp_area, disp_buf, &draw_area, map_area, map_buf, opa, mask, mask_res);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
+#endif
     }
 #if LV_DRAW_COMPLEX
     else {
+        // This draw buffer is not a GPU-only buffer.
+        LV_ASSERT(lv_gpu_ambiq_nema_gpu_only_fb(disp) == LV_RES_INV);
+
+        // Invalid the Dcache
+        lv_ambiq_cache_invalid_draw_buffer(disp);
+
         map_blended(disp_area, disp_buf, &draw_area, map_area, map_buf, opa, mask, mask_res, mode);
+
+        // Clean the Dcache
+        lv_ambiq_cache_invalid_and_clean_draw_buffer(disp);
     }
 #endif
 }

@@ -20,6 +20,15 @@
 
 #if LV_USE_PERF_MONITOR || LV_USE_MEM_MONITOR
     #include "../widgets/lv_label.h"
+#if LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#include LV_GET_CPU_OCCUPATION_INCLUDE
+#endif
+
+#endif
+
+#include "lv_ambiq_misc.h"
+#if defined(NEMA_GFX_POWERSAVE) && !defined(NEMA_GFX_POWEROFF_END_CL)
+#include "lv_ambiq_nema_hal.h"
 #endif
 
 /*********************
@@ -213,6 +222,8 @@ void _lv_disp_refr_timer(lv_timer_t * tmr)
 
     lv_refr_join_area();
 
+    lv_ambiq_cache_invalid_draw_buffer(disp_refr);
+
     lv_refr_areas();
 
     /*If refresh happened ...*/
@@ -259,6 +270,51 @@ void _lv_disp_refr_timer(lv_timer_t * tmr)
     static uint32_t perf_last_time = 0;
     static uint32_t elaps_sum = 0;
     static uint32_t frame_cnt = 0;
+
+#if LV_USE_AMBIQ_PERF_MONITOR_REFINED
+    LV_UNUSED(elaps_sum);
+
+    //We only do the calculation when the the last part is flushed.
+    if(disp_refr->driver->draw_buf->flushing_last)
+    {      
+        frame_cnt ++;
+
+        uint32_t current_tick = lv_tick_get();
+
+        /*If there is no overflow, just subtract*/
+        if(current_tick >= perf_last_time) {
+            elaps = current_tick - perf_last_time;
+        }
+        else {
+            elaps = UINT32_MAX - perf_last_time + 1;
+            elaps += current_tick;
+        }
+
+        if(elaps >= 1000)
+        {
+            uint32_t fps_limit = 1000 / disp_refr->refr_timer->period;
+            uint32_t fps;
+
+            //Adding this to round up the fps value.
+            uint32_t half_elaps = elaps >> 1;
+
+            fps = (1000 * ( frame_cnt + 1 ) + half_elaps) / elaps;
+
+            frame_cnt = 0;
+            perf_last_time = current_tick;
+
+            if(fps > fps_limit) fps = fps_limit;
+
+            fps_sum_all += fps;
+            fps_sum_cnt ++;
+
+            uint32_t cpu = LV_GET_CPU_OCCUPATION;
+
+            lv_label_set_text_fmt(perf_label, "%ld FPS\n%ld%% CPU", fps, cpu);
+        }
+    }
+#else
+
     if(lv_tick_elaps(perf_last_time) < 300) {
         if(px_num > 5000) {
             elaps_sum += elaps;
@@ -282,6 +338,7 @@ void _lv_disp_refr_timer(lv_timer_t * tmr)
         unsigned int cpu = 100 - lv_timer_get_idle();
         lv_label_set_text_fmt(perf_label, "%u FPS\n%u%% CPU", fps, cpu);
     }
+#endif
 #endif
 
 #if LV_USE_MEM_MONITOR && LV_MEM_CUSTOM == 0 && LV_USE_LABEL
@@ -580,8 +637,21 @@ static void lv_refr_area_part(const lv_area_t * area_p)
 
     /*In true double buffered mode flush only once when all areas were rendered.
      *In normal mode flush after every area*/
-    if(disp_refr->driver->full_refresh == false) {
-        draw_buf_flush();
+    if(disp_refr->driver->full_refresh == false)
+    {
+        if(disp_refr->driver->direct_mode == false)
+        {
+            /*If direct mode is not enabled, flush the buffer directly*/
+            draw_buf_flush();          
+        }
+        else
+        {
+            /*If direct mode enabled, flush once when all the dirty area is refreshed*/
+            if(disp_refr->driver->draw_buf->last_area && disp_refr->driver->draw_buf->last_part)
+            {
+                draw_buf_flush();
+            }
+        }
     }
 }
 
@@ -942,6 +1012,11 @@ static void draw_buf_flush(void)
     /*Flush the rendered content to the display*/
     lv_disp_t * disp = _lv_refr_get_disp_refreshing();
     if(disp->driver->gpu_wait_cb) disp->driver->gpu_wait_cb(disp->driver);
+
+#if defined(NEMA_GFX_POWERSAVE) && !defined(NEMA_GFX_POWEROFF_END_CL)
+    //Power off GPU in frame end
+    lv_ambiq_nema_gpu_check_busy_and_suspend();
+#endif
 
     /* In double buffered mode wait until the other buffer is freed
      * and driver is ready to receive the new buffer */

@@ -61,7 +61,7 @@
 #  ifdef CONFIG_LV_COLOR_DEPTH
 #    define LV_COLOR_DEPTH CONFIG_LV_COLOR_DEPTH
 #  else
-#    define LV_COLOR_DEPTH 16
+#    define LV_COLOR_DEPTH     32
 #  endif
 #endif
 
@@ -117,27 +117,56 @@
 #  endif
 #endif
 #if LV_MEM_CUSTOM == 0
-/*Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB)*/
-#ifndef LV_MEM_SIZE
-#  ifdef CONFIG_LV_MEM_SIZE
-#    define LV_MEM_SIZE CONFIG_LV_MEM_SIZE
+
+/*Size of the memory available for TCM heap in bytes (>= 2kB)*/
+#ifndef LV_MEM_TCM_SIZE
+#  ifdef CONFIG_LV_MEM_TCM_SIZE
+#    define LV_MEM_TCM_SIZE CONFIG_LV_MEM_TCM_SIZE
 #  else
-#    define LV_MEM_SIZE (32U * 1024U)          /*[bytes]*/
+#    define LV_MEM_TCM_SIZE (32UL * 1024UL)          /*[bytes]*/
+#  endif
+#endif
+/*Set an address for the TCM heap.*/
+#ifndef LV_MEM_TCM_ADR
+#  ifdef CONFIG_LV_MEM_TCM_ADR
+#    define LV_MEM_TCM_ADR CONFIG_LV_MEM_TCM_ADR
+#  else
+#    define LV_MEM_TCM_ADR (0x10060000UL - 32UL * 1024UL)   /*0: unused*/
 #  endif
 #endif
 
-/*Set an address for the memory pool instead of allocating it as a normal array. Can be in external SRAM too.*/
-#ifndef LV_MEM_ADR
-#  ifdef CONFIG_LV_MEM_ADR
-#    define LV_MEM_ADR CONFIG_LV_MEM_ADR
+/*Size of the memory available for SSRAM heap in bytes*/
+#ifndef LV_MEM_SSRAM_SIZE
+#  ifdef CONFIG_LV_MEM_SSRAM_SIZE
+#    define LV_MEM_SSRAM_SIZE CONFIG_LV_MEM_SSRAM_SIZE
 #  else
-#    define LV_MEM_ADR 0     /*0: unused*/
+#    define LV_MEM_SSRAM_SIZE (1UL * 1024UL * 1024UL - 0x40UL)          /*[bytes]*/
 #  endif
 #endif
-/*Instead of an address give a memory allocator that will be called to get a memory pool for LVGL. E.g. my_malloc*/
-#if LV_MEM_ADR == 0
-//#define LV_MEM_POOL_INCLUDE your_alloc_library  /* Uncomment if using an external allocator*/
-//#define LV_MEM_POOL_ALLOC   your_alloc          /* Uncomment if using an external allocator*/
+/*Set an address for the SSRAM heap.*/
+#ifndef LV_MEM_SSRAM_ADR
+#  ifdef CONFIG_LV_MEM_SSRAM_ADR
+#    define LV_MEM_SSRAM_ADR CONFIG_LV_MEM_SSRAM_ADR
+#  else
+#    define LV_MEM_SSRAM_ADR (0x10060000UL + 0x40UL)     /*0: unused*/
+#  endif
+#endif
+
+/*Size of the memory available for PSRAM heap in bytes*/
+#ifndef LV_MEM_PSRAM_SIZE
+#  ifdef CONFIG_LV_MEM_PSRAM_SIZE
+#    define LV_MEM_PSRAM_SIZE CONFIG_LV_MEM_PSRAM_SIZE
+#  else
+#    define LV_MEM_PSRAM_SIZE (16UL * 1024UL * 1024UL)         /*[bytes]*/
+#  endif
+#endif
+/*Set an address for the PSRAM heap*/
+#ifndef LV_MEM_PSRAM_ADR
+#  ifdef CONFIG_LV_MEM_PSRAM_ADR
+#    define LV_MEM_PSRAM_ADR CONFIG_LV_MEM_PSRAM_ADR
+#  else
+#    define LV_MEM_PSRAM_ADR (0x14000000UL)    /*0: unused*/
+#  endif
 #endif
 
 #else       /*LV_MEM_CUSTOM*/
@@ -148,25 +177,73 @@
 #    define LV_MEM_CUSTOM_INCLUDE <stdlib.h>   /*Header for the dynamic memory function*/
 #  endif
 #endif
-#ifndef LV_MEM_CUSTOM_ALLOC
-#  ifdef CONFIG_LV_MEM_CUSTOM_ALLOC
-#    define LV_MEM_CUSTOM_ALLOC CONFIG_LV_MEM_CUSTOM_ALLOC
+
+/* TCM heap operation */
+#ifndef LV_MEM_CUSTOM_TCM_ALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_TCM_ALLOC
+#    define LV_MEM_CUSTOM_TCM_ALLOC CONFIG_LV_MEM_CUSTOM_TCM_ALLOC
 #  else
-#    define LV_MEM_CUSTOM_ALLOC   malloc
+#    define LV_MEM_CUSTOM_TCM_ALLOC   malloc
 #  endif
 #endif
-#ifndef LV_MEM_CUSTOM_FREE
-#  ifdef CONFIG_LV_MEM_CUSTOM_FREE
-#    define LV_MEM_CUSTOM_FREE CONFIG_LV_MEM_CUSTOM_FREE
+#ifndef LV_MEM_CUSTOM_TCM_FREE
+#  ifdef CONFIG_LV_MEM_CUSTOM_TCM_FREE
+#    define LV_MEM_CUSTOM_TCM_FREE CONFIG_LV_MEM_CUSTOM_TCM_FREE
 #  else
-#    define LV_MEM_CUSTOM_FREE    free
+#    define LV_MEM_CUSTOM_TCM_FREE    free
 #  endif
 #endif
-#ifndef LV_MEM_CUSTOM_REALLOC
-#  ifdef CONFIG_LV_MEM_CUSTOM_REALLOC
-#    define LV_MEM_CUSTOM_REALLOC CONFIG_LV_MEM_CUSTOM_REALLOC
+#ifndef LV_MEM_CUSTOM_TCM_REALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_TCM_REALLOC
+#    define LV_MEM_CUSTOM_TCM_REALLOC CONFIG_LV_MEM_CUSTOM_TCM_REALLOC
 #  else
-#    define LV_MEM_CUSTOM_REALLOC realloc
+#    define LV_MEM_CUSTOM_TCM_REALLOC realloc
+#  endif
+#endif
+
+/* SSRAM heap operation */
+#ifndef LV_MEM_CUSTOM_SSRAM_ALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_SSRAM_ALLOC
+#    define LV_MEM_CUSTOM_SSRAM_ALLOC CONFIG_LV_MEM_CUSTOM_SSRAM_ALLOC
+#  else
+#    define LV_MEM_CUSTOM_SSRAM_ALLOC   malloc /*Note: this allocator must allocate a buffer align to 8*/
+#  endif
+#endif
+#ifndef LV_MEM_CUSTOM_SSRAM_FREE
+#  ifdef CONFIG_LV_MEM_CUSTOM_SSRAM_FREE
+#    define LV_MEM_CUSTOM_SSRAM_FREE CONFIG_LV_MEM_CUSTOM_SSRAM_FREE
+#  else
+#    define LV_MEM_CUSTOM_SSRAM_FREE    free
+#  endif
+#endif
+#ifndef LV_MEM_CUSTOM_SSRAM_REALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_SSRAM_REALLOC
+#    define LV_MEM_CUSTOM_SSRAM_REALLOC CONFIG_LV_MEM_CUSTOM_SSRAM_REALLOC
+#  else
+#    define LV_MEM_CUSTOM_SSRAM_REALLOC realloc
+#  endif
+#endif
+
+/* PSRAM heap operation */
+#ifndef LV_MEM_CUSTOM_PSRAM_ALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_PSRAM_ALLOC
+#    define LV_MEM_CUSTOM_PSRAM_ALLOC CONFIG_LV_MEM_CUSTOM_PSRAM_ALLOC
+#  else
+#    define LV_MEM_CUSTOM_PSRAM_ALLOC   malloc /*Note: this allocator must allocate a buffer align to 8*/
+#  endif
+#endif
+#ifndef LV_MEM_CUSTOM_PSRAM_FREE
+#  ifdef CONFIG_LV_MEM_CUSTOM_PSRAM_FREE
+#    define LV_MEM_CUSTOM_PSRAM_FREE CONFIG_LV_MEM_CUSTOM_PSRAM_FREE
+#  else
+#    define LV_MEM_CUSTOM_PSRAM_FREE    free
+#  endif
+#endif
+#ifndef LV_MEM_CUSTOM_PSRAM_REALLOC
+#  ifdef CONFIG_LV_MEM_CUSTOM_PSRAM_REALLOC
+#    define LV_MEM_CUSTOM_PSRAM_REALLOC CONFIG_LV_MEM_CUSTOM_PSRAM_REALLOC
+#  else
+#    define LV_MEM_CUSTOM_PSRAM_REALLOC realloc
 #  endif
 #endif
 #endif     /*LV_MEM_CUSTOM*/
@@ -199,7 +276,7 @@
 #  ifdef CONFIG_LV_DISP_DEF_REFR_PERIOD
 #    define LV_DISP_DEF_REFR_PERIOD CONFIG_LV_DISP_DEF_REFR_PERIOD
 #  else
-#    define LV_DISP_DEF_REFR_PERIOD 30      /*[ms]*/
+#    define LV_DISP_DEF_REFR_PERIOD     2      /*[ms]*/
 #  endif
 #endif
 
@@ -208,7 +285,7 @@
 #  ifdef CONFIG_LV_INDEV_DEF_READ_PERIOD
 #    define LV_INDEV_DEF_READ_PERIOD CONFIG_LV_INDEV_DEF_READ_PERIOD
 #  else
-#    define LV_INDEV_DEF_READ_PERIOD 30     /*[ms]*/
+#    define LV_INDEV_DEF_READ_PERIOD 1     /*[ms]*/
 #  endif
 #endif
 
@@ -244,7 +321,7 @@
 #  ifdef CONFIG_LV_DPI_DEF
 #    define LV_DPI_DEF CONFIG_LV_DPI_DEF
 #  else
-#    define LV_DPI_DEF 130     /*[px/inch]*/
+#    define LV_DPI_DEF                  462     /*[px/inch]*/
 #  endif
 #endif
 
@@ -375,6 +452,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #endif
 
 /*Use exnternal renderer*/
+/*Please do not enable this*/
 #ifndef LV_USE_EXTERNAL_RENDERER
 #  ifdef CONFIG_LV_USE_EXTERNAL_RENDERER
 #    define LV_USE_EXTERNAL_RENDERER CONFIG_LV_USE_EXTERNAL_RENDERER
@@ -382,7 +460,6 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #    define LV_USE_EXTERNAL_RENDERER 0
 #  endif
 #endif
-
 /*Use SDL renderer API. Requires LV_USE_EXTERNAL_RENDERER*/
 #ifndef LV_USE_GPU_SDL
 #  ifdef CONFIG_LV_USE_GPU_SDL
@@ -399,6 +476,48 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #    define LV_GPU_SDL_INCLUDE_PATH <SDL2/SDL.h>
 #  endif
 #endif
+#endif
+
+/*Use Ambiq's GPU*/
+#ifndef LV_USE_GPU_AMBIQ_NEMA
+#  ifdef _LV_KCONFIG_PRESENT
+#    ifdef CONFIG_LV_USE_GPU_AMBIQ_NEMA
+#      define LV_USE_GPU_AMBIQ_NEMA CONFIG_LV_USE_GPU_AMBIQ_NEMA
+#    else
+#      define LV_USE_GPU_AMBIQ_NEMA 0
+#    endif
+#  else
+#    define LV_USE_GPU_AMBIQ_NEMA  1
+#  endif
+#endif
+#if LV_USE_GPU_AMBIQ_NEMA
+
+//GPU and CPU is working asynchronously, so buffers holding the image texture data 
+//should keep unchanged until current frame refresh is complete. 
+//Enable this if there is any risk that the buffer content is changed while current frame is refreshing.
+#ifndef LV_AMBIQ_NEMA_IMAGE_SYNC
+#  ifdef CONFIG_LV_AMBIQ_NEMA_IMAGE_SYNC
+#    define LV_AMBIQ_NEMA_IMAGE_SYNC CONFIG_LV_AMBIQ_NEMA_IMAGE_SYNC
+#  else
+#    define LV_AMBIQ_NEMA_IMAGE_SYNC 0
+#  endif
+#endif
+
+
+#endif
+
+//Define this to 0 if you haven't realign the font bitmap, it will cause error when rendering
+//font using GPU.
+#ifndef LV_AMBIQ_FONT_REALIGN_BITMAP
+#  ifdef _LV_KCONFIG_PRESENT
+#    ifdef CONFIG_LV_AMBIQ_FONT_REALIGN_BITMAP
+#      define LV_AMBIQ_FONT_REALIGN_BITMAP CONFIG_LV_AMBIQ_FONT_REALIGN_BITMAP
+#    else
+#      define LV_AMBIQ_FONT_REALIGN_BITMAP 0
+#    endif
+#  else
+#    define LV_AMBIQ_FONT_REALIGN_BITMAP  1
+#  endif
 #endif
 
 /*-------------
@@ -607,9 +726,39 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #  ifdef CONFIG_LV_USE_PERF_MONITOR_POS
 #    define LV_USE_PERF_MONITOR_POS CONFIG_LV_USE_PERF_MONITOR_POS
 #  else
-#    define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
+#    define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_MID
 #  endif
 #endif
+
+/*Enable this to use the refined performance monitor, user should define a function to get the CPU occupation rate*/
+#ifndef LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#  ifdef _LV_KCONFIG_PRESENT
+#    ifdef CONFIG_LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#      define LV_USE_AMBIQ_PERF_MONITOR_REFINED CONFIG_LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#    else
+#      define LV_USE_AMBIQ_PERF_MONITOR_REFINED 0
+#    endif
+#  else
+#    define LV_USE_AMBIQ_PERF_MONITOR_REFINED 1
+#  endif
+#endif
+#if LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#ifndef LV_GET_CPU_OCCUPATION_INCLUDE
+#  ifdef CONFIG_LV_GET_CPU_OCCUPATION_INCLUDE
+#    define LV_GET_CPU_OCCUPATION_INCLUDE CONFIG_LV_GET_CPU_OCCUPATION_INCLUDE
+#  else
+#    define LV_GET_CPU_OCCUPATION_INCLUDE "Myheader.h"         /*Header for the getCpuOccupationRate API*/
+#  endif
+#endif
+#ifndef LV_GET_CPU_OCCUPATION
+#  ifdef CONFIG_LV_GET_CPU_OCCUPATION
+#    define LV_GET_CPU_OCCUPATION CONFIG_LV_GET_CPU_OCCUPATION
+#  else
+#    define LV_GET_CPU_OCCUPATION (getCpuOccupationRate())    /*get cpu occupation rate api, uint32_t getCpuOccupationRate(void)*/
+#  endif
+#endif
+#endif
+
 #endif
 
 /*1: Show the used memory and the memory fragmentation in the left bottom corner
@@ -626,7 +775,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #  ifdef CONFIG_LV_USE_MEM_MONITOR_POS
 #    define LV_USE_MEM_MONITOR_POS CONFIG_LV_USE_MEM_MONITOR_POS
 #  else
-#    define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
+#    define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_MID
 #  endif
 #endif
 #endif

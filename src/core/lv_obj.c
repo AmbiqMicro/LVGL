@@ -39,6 +39,11 @@
     #include "../gpu/lv_gpu_sdl.h"
 #endif
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../gpu/lv_gpu_ambiq_nema.h"
+    #include "../gpu/lv_ambiq_decoder.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -129,6 +134,13 @@ void lv_init(void)
     lv_gpu_sdl_init();
 #endif
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    if(lv_gpu_ambiq_nema_init() != LV_RES_OK) {
+        LV_LOG_ERROR("Nema SDK init error. STOP.\n");
+        for(; ;) ;
+    }
+#endif
+
     _lv_obj_style_init();
     _lv_ll_init(&LV_GC_ROOT(_lv_disp_ll), sizeof(lv_disp_t));
     _lv_ll_init(&LV_GC_ROOT(_lv_indev_ll), sizeof(lv_indev_t));
@@ -137,6 +149,11 @@ void lv_init(void)
     _lv_refr_init();
 
     _lv_img_decoder_init();
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    _lv_img_decoder_ambiq_add();
+#endif
+
 #if LV_IMG_CACHE_DEF_SIZE
     lv_img_cache_set_size(LV_IMG_CACHE_DEF_SIZE);
 #endif

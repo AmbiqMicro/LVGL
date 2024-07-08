@@ -12,6 +12,9 @@
 #include "../core/lv_refr.h"
 #include "../misc/lv_bidi.h"
 #include "../misc/lv_assert.h"
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../gpu/lv_gpu_ambiq_nema.h"
+#endif
 
 #if LV_USE_GPU_SDL
     #include "../gpu/lv_gpu_sdl.h"
@@ -37,6 +40,13 @@ typedef uint8_t cmd_state_t;
  **********************/
 
 #if LV_USE_EXTERNAL_RENDERER == 0
+#if LV_USE_GPU_AMBIQ_NEMA
+LV_ATTRIBUTE_FAST_MEM void lv_draw_letter_inter(const lv_point_t * pos_p, const lv_area_t * clip_area,
+                                          const lv_font_t * font_p,
+                                          uint32_t letter,
+                                          lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
+#endif /*LV_USE_GPU_AMBIQ_NEMA*/
+
 LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_t pos_y, lv_font_glyph_dsc_t * g,
                                                      const lv_area_t * clip_area,
                                                      const uint8_t * map_p, lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode);
@@ -248,6 +258,11 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(const lv_area_t * coords, const lv_area
     draw_dsc_sel.bg_color = dsc->sel_bg_color;
 
     int32_t pos_x_start = pos.x;
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    lv_gpu_ambiq_nema_draw_label_pre(mask, dsc->blend_mode);
+#endif
+
     /*Write out all lines*/
     while(txt[line_start] != '\0') {
         pos.x += x_ofs;
@@ -335,7 +350,11 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(const lv_area_t * coords, const lv_area
                 }
             }
 
+#if LV_USE_GPU_AMBIQ_NEMA
+            lv_draw_letter_inter(&pos, mask, font, letter, color, opa, dsc->blend_mode);
+#else
             lv_draw_letter(&pos, mask, font, letter, color, opa, dsc->blend_mode);
+#endif
 
             if(letter_w > 0) {
                 pos.x += letter_w + dsc->letter_space;
@@ -389,8 +408,18 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(const lv_area_t * coords, const lv_area
         /*Go the next line position*/
         pos.y += line_height;
 
-        if(pos.y > mask->y2) return;
+        if(pos.y > mask->y2)
+        {
+#if LV_USE_GPU_AMBIQ_NEMA
+            lv_gpu_ambiq_nema_draw_label_post();
+#endif
+            return;
+        }
     }
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    lv_gpu_ambiq_nema_draw_label_post();
+#endif
 
     LV_ASSERT_MEM_INTEGRITY();
 }
@@ -409,10 +438,30 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_label(const lv_area_t * coords, const lv_area
  * @param color color of letter
  * @param opa opacity of letter (0..255)
  */
+#if LV_USE_GPU_AMBIQ_NEMA
+// A simple wrap of the lv_draw_letter_inter API.
 LV_ATTRIBUTE_FAST_MEM void lv_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area,
                                           const lv_font_t * font_p,
                                           uint32_t letter,
                                           lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+{
+    lv_gpu_ambiq_nema_draw_letter_pre(clip_area, blend_mode);
+
+    lv_draw_letter_inter(pos_p, clip_area, font_p, letter, color, opa, blend_mode);
+
+    lv_gpu_ambiq_nema_draw_letter_post();
+}
+
+LV_ATTRIBUTE_FAST_MEM void lv_draw_letter_inter(const lv_point_t * pos_p, const lv_area_t * clip_area,
+                                          const lv_font_t * font_p,
+                                          uint32_t letter,
+                                          lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+#else
+LV_ATTRIBUTE_FAST_MEM void lv_draw_letter(const lv_point_t * pos_p, const lv_area_t * clip_area,
+                                          const lv_font_t * font_p,
+                                          uint32_t letter,
+                                          lv_color_t color, lv_opa_t opa, lv_blend_mode_t blend_mode)
+#endif
 {
     if(opa < LV_OPA_MIN) return;
     if(opa > LV_OPA_MAX) opa = LV_OPA_COVER;
@@ -463,9 +512,18 @@ LV_ATTRIBUTE_FAST_MEM void lv_draw_letter(const lv_point_t * pos_p, const lv_are
 #endif
     }
     else {
+#if LV_USE_GPU_AMBIQ_NEMA
+        lv_res_t gpu_res = lv_gpu_ambiq_nema_draw_letter(pos_x, pos_y, &g, clip_area, map_p, color, opa, blend_mode);
+        if(gpu_res == LV_RES_INV)
+        {
+            draw_letter_normal(pos_x, pos_y, &g, clip_area, map_p, color, opa, blend_mode);
+        }
+#else
         draw_letter_normal(pos_x, pos_y, &g, clip_area, map_p, color, opa, blend_mode);
+#endif
     }
 }
+
 
 LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_t pos_y, lv_font_glyph_dsc_t * g,
                                                      const lv_area_t * clip_area,
@@ -524,6 +582,16 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_
     int32_t box_h = g->box_h;
     int32_t width_bit = box_w * bpp; /*Letter width in bits*/
 
+#if LV_AMBIQ_FONT_REALIGN_BITMAP
+    uint32_t row_padding_bits = 0;
+    //We have realign the bitmap in our script, this script will make start address of each horizontal align to byte.
+    if(width_bit&(0x00000007UL))
+    {
+        row_padding_bits = 8 - (width_bit&(0x00000007UL));
+        width_bit += row_padding_bits;
+    }
+#endif
+
     /*Calculate the col/row start/end on the map*/
     int32_t col_start = pos_x >= clip_area->x1 ? 0 : clip_area->x1 - pos_x;
     int32_t col_end   = pos_x + box_w <= clip_area->x2 ? box_w : clip_area->x2 - pos_x + 1;
@@ -540,7 +608,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_
 
     lv_coord_t hor_res = lv_disp_get_hor_res(_lv_refr_get_disp_refreshing());
     uint32_t mask_buf_size = box_w * box_h > hor_res ? hor_res : box_w * box_h;
-    lv_opa_t * mask_buf = lv_mem_buf_get(mask_buf_size);
+    lv_opa_t * mask_buf = lv_mem_ssram_alloc(mask_buf_size);
     int32_t mask_p = 0;
 
     lv_area_t fill_area;
@@ -554,6 +622,11 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_
 
     uint32_t col_bit_max = 8 - bpp;
     uint32_t col_bit_row_ofs = (box_w + col_start - col_end) * bpp;
+
+#if LV_AMBIQ_FONT_REALIGN_BITMAP
+    //We have realign the bitmap in our script, this script will make start address of each horizontal align to byte.
+    col_bit_row_ofs += row_padding_bits;
+#endif
 
     for(row = row_start ; row < row_end; row++) {
 #if LV_DRAW_COMPLEX
@@ -623,7 +696,7 @@ LV_ATTRIBUTE_FAST_MEM static void draw_letter_normal(lv_coord_t pos_x, lv_coord_
         mask_p = 0;
     }
 
-    lv_mem_buf_release(mask_buf);
+    lv_mem_free(mask_buf);
 }
 
 #if LV_DRAW_COMPLEX && LV_USE_FONT_SUBPX
@@ -688,10 +761,10 @@ static void draw_letter_subpx(lv_coord_t pos_x, lv_coord_t pos_y, lv_font_glyph_
     if(map_area.x2 <= map_area.x1) return;
 
     int32_t mask_buf_size = box_w * box_h > _LV_MASK_BUF_MAX_SIZE ? _LV_MASK_BUF_MAX_SIZE : g->box_w * g->box_h;
-    lv_opa_t * mask_buf = lv_mem_buf_get(mask_buf_size);
+    lv_opa_t * mask_buf = lv_mem_ssram_alloc(mask_buf_size);
     int32_t mask_p = 0;
 
-    lv_color_t * color_buf = lv_mem_buf_get(mask_buf_size * sizeof(lv_color_t));
+    lv_color_t * color_buf = lv_mem_ssram_alloc(mask_buf_size * sizeof(lv_color_t));
 
     lv_disp_t * disp = _lv_refr_get_disp_refreshing();
     lv_disp_draw_buf_t * draw_buf = lv_disp_get_draw_buf(disp);
@@ -827,11 +900,10 @@ static void draw_letter_subpx(lv_coord_t pos_x, lv_coord_t pos_y, lv_font_glyph_
         _lv_blend_map(clip_area, &map_area, color_buf, mask_buf, LV_DRAW_MASK_RES_CHANGED, opa, blend_mode);
     }
 
-    lv_mem_buf_release(mask_buf);
-    lv_mem_buf_release(color_buf);
+    lv_mem_free(mask_buf);
+    lv_mem_free(color_buf);
 }
 #endif /*LV_DRAW_COMPLEX && LV_USE_FONT_SUBPX*/
-
 #endif /*LV_USE_EXTERNAL_RENDERER*/
 /**
  * Convert a hexadecimal characters to a number (0..15)

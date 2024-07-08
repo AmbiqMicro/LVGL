@@ -262,7 +262,7 @@ static bool load_cmaps_tables(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_ds
         switch(cmap_table[i].format_type) {
             case LV_FONT_FMT_TXT_CMAP_FORMAT0_FULL: {
                     uint8_t ids_size = sizeof(uint8_t) * cmap_table[i].data_entries_count;
-                    uint8_t * glyph_id_ofs_list = lv_mem_alloc(ids_size);
+                    uint8_t * glyph_id_ofs_list = lv_mem_font_info_alloc(ids_size);
 
                     cmap->glyph_id_ofs_list = glyph_id_ofs_list;
 
@@ -278,7 +278,7 @@ static bool load_cmaps_tables(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_ds
             case LV_FONT_FMT_TXT_CMAP_SPARSE_FULL:
             case LV_FONT_FMT_TXT_CMAP_SPARSE_TINY: {
                     uint32_t list_size = sizeof(uint16_t) * cmap_table[i].data_entries_count;
-                    uint16_t * unicode_list = (uint16_t *)lv_mem_alloc(list_size);
+                    uint16_t * unicode_list = (uint16_t *)lv_mem_font_info_alloc(list_size);
 
                     cmap->unicode_list = unicode_list;
                     cmap->list_length = cmap_table[i].data_entries_count;
@@ -288,7 +288,7 @@ static bool load_cmaps_tables(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_ds
                     }
 
                     if(cmap_table[i].format_type == LV_FONT_FMT_TXT_CMAP_SPARSE_FULL) {
-                        uint16_t * buf = lv_mem_alloc(sizeof(uint16_t) * cmap->list_length);
+                        uint16_t * buf = lv_mem_font_info_alloc(sizeof(uint16_t) * cmap->list_length);
 
                         cmap->glyph_id_ofs_list = buf;
 
@@ -319,14 +319,14 @@ static int32_t load_cmaps(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc, u
     }
 
     lv_font_fmt_txt_cmap_t * cmaps =
-        lv_mem_alloc(cmaps_subtables_count * sizeof(lv_font_fmt_txt_cmap_t));
+        lv_mem_font_info_alloc(cmaps_subtables_count * sizeof(lv_font_fmt_txt_cmap_t));
 
     memset(cmaps, 0, cmaps_subtables_count * sizeof(lv_font_fmt_txt_cmap_t));
 
     font_dsc->cmaps = cmaps;
     font_dsc->cmap_num = cmaps_subtables_count;
 
-    cmap_table_bin_t * cmaps_tables = lv_mem_alloc(sizeof(cmap_table_bin_t) * font_dsc->cmap_num);
+    cmap_table_bin_t * cmaps_tables = lv_mem_font_info_alloc(sizeof(cmap_table_bin_t) * font_dsc->cmap_num);
 
     bool success = load_cmaps_tables(fp, font_dsc, cmaps_start, cmaps_tables);
 
@@ -344,7 +344,7 @@ static int32_t load_glyph(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc,
     }
 
     lv_font_fmt_txt_glyph_dsc_t * glyph_dsc = (lv_font_fmt_txt_glyph_dsc_t *)
-                                              lv_mem_alloc(loca_count * sizeof(lv_font_fmt_txt_glyph_dsc_t));
+                                              lv_mem_font_info_alloc(loca_count * sizeof(lv_font_fmt_txt_glyph_dsc_t));
 
     memset(glyph_dsc, 0, loca_count * sizeof(lv_font_fmt_txt_glyph_dsc_t));
 
@@ -397,6 +397,16 @@ static int32_t load_glyph(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc,
         }
 
         int nbits = header->advance_width_bits + 2 * header->xy_bits + 2 * header->wh_bits;
+
+        #if LV_AMBIQ_FONT_REALIGN_BITMAP
+        //We have realign the bitmap in out script, this will help us walk in the fast path when loading glyph_bmp data.
+        if(nbits%8)
+        {
+            nbits += 8;
+            nbits &= ~0x07;
+        }
+        #endif
+
         int next_offset = (i < loca_count - 1) ? glyph_offset[i + 1] : (uint32_t)glyph_length;
         int bmp_size = next_offset - glyph_offset[i] - nbits / 8;
 
@@ -414,7 +424,7 @@ static int32_t load_glyph(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc,
         }
     }
 
-    uint8_t * glyph_bmp = (uint8_t *)lv_mem_alloc(sizeof(uint8_t) * cur_bmp_size);
+    uint8_t * glyph_bmp = (uint8_t *)lv_mem_font_glyph_alloc(sizeof(uint8_t) * cur_bmp_size);
 
     font_dsc->glyph_bitmap = glyph_bmp;
 
@@ -428,6 +438,15 @@ static int32_t load_glyph(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc,
         bit_iterator_t bit_it = init_bit_iterator(fp);
 
         int nbits = header->advance_width_bits + 2 * header->xy_bits + 2 * header->wh_bits;
+
+        #if LV_AMBIQ_FONT_REALIGN_BITMAP
+        //We have realign the bitmap in out script, this will help us walk in the fast path when loading glyph_bmp data.
+        if(nbits%8)
+        {
+            nbits += 8;
+            nbits &= ~0x07;
+        }
+        #endif
 
         read_bits(&bit_it, nbits, &res);
         if(res != LV_FS_RES_OK) {
@@ -532,7 +551,7 @@ static bool lvgl_load_font(lv_fs_file_t * fp, lv_font_t * font)
     }
 
     bool failed = false;
-    uint32_t * glyph_offset = lv_mem_alloc(sizeof(uint32_t) * (loca_count + 1));
+    uint32_t * glyph_offset = lv_mem_font_info_alloc(sizeof(uint32_t) * (loca_count + 1));
 
     if(font_header.index_to_loc_format == 0) {
         for(unsigned int i = 0; i < loca_count; ++i) {
@@ -599,7 +618,7 @@ int32_t load_kern(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc, uint8_t f
     }
 
     if(0 == kern_format_type) { /*sorted pairs*/
-        lv_font_fmt_txt_kern_pair_t * kern_pair = lv_mem_alloc(sizeof(lv_font_fmt_txt_kern_pair_t));
+        lv_font_fmt_txt_kern_pair_t * kern_pair = lv_mem_font_info_alloc(sizeof(lv_font_fmt_txt_kern_pair_t));
 
         memset(kern_pair, 0, sizeof(lv_font_fmt_txt_kern_pair_t));
 
@@ -619,8 +638,8 @@ int32_t load_kern(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc, uint8_t f
             ids_size = sizeof(int16_t) * 2 * glyph_entries;
         }
 
-        uint8_t * glyph_ids = lv_mem_alloc(ids_size);
-        int8_t * values = lv_mem_alloc(glyph_entries);
+        uint8_t * glyph_ids = lv_mem_font_info_alloc(ids_size);
+        int8_t * values = lv_mem_font_info_alloc(glyph_entries);
 
         kern_pair->glyph_ids_size = format;
         kern_pair->pair_cnt = glyph_entries;
@@ -637,7 +656,7 @@ int32_t load_kern(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc, uint8_t f
     }
     else if(3 == kern_format_type) { /*array M*N of classes*/
 
-        lv_font_fmt_txt_kern_classes_t * kern_classes = lv_mem_alloc(sizeof(lv_font_fmt_txt_kern_classes_t));
+        lv_font_fmt_txt_kern_classes_t * kern_classes = lv_mem_font_info_alloc(sizeof(lv_font_fmt_txt_kern_classes_t));
 
         memset(kern_classes, 0, sizeof(lv_font_fmt_txt_kern_classes_t));
 
@@ -656,9 +675,9 @@ int32_t load_kern(lv_fs_file_t * fp, lv_font_fmt_txt_dsc_t * font_dsc, uint8_t f
 
         int kern_values_length = sizeof(int8_t) * kern_table_rows * kern_table_cols;
 
-        uint8_t * kern_left = lv_mem_alloc(kern_class_mapping_length);
-        uint8_t * kern_right = lv_mem_alloc(kern_class_mapping_length);
-        int8_t * kern_values = lv_mem_alloc(kern_values_length);
+        uint8_t * kern_left = lv_mem_font_info_alloc(kern_class_mapping_length);
+        uint8_t * kern_right = lv_mem_font_info_alloc(kern_class_mapping_length);
+        int8_t * kern_values = lv_mem_font_info_alloc(kern_values_length);
 
         kern_classes->left_class_mapping  = kern_left;
         kern_classes->right_class_mapping = kern_right;

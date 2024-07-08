@@ -346,6 +346,12 @@ void lv_anim_del_all(void);
 lv_anim_t * lv_anim_get(void * var, lv_anim_exec_xcb_t exec_cb);
 
 /**
+ * Get global animation refresher timer.
+ * @return pointer to the animation refresher timer.
+ */
+struct _lv_timer_t * lv_anim_get_timer(void);
+
+/**
  * Delete an animation by getting the animated variable from `a`.
  * Only animations with `exec_cb` will be deleted.
  * This function exists because it's logical that all anim. functions receives an

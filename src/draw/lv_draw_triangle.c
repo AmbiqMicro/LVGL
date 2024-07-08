@@ -10,6 +10,10 @@
 #include "../misc/lv_math.h"
 #include "../misc/lv_mem.h"
 
+#if LV_USE_GPU_AMBIQ_NEMA
+    #include "../gpu/lv_gpu_ambiq_nema.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -89,6 +93,14 @@ void lv_draw_polygon(const lv_point_t points[], uint16_t point_cnt, const lv_are
         lv_mem_buf_release(p);
         return;
     }
+
+#if LV_USE_GPU_AMBIQ_NEMA
+    //TODO: make sure these points are located in the clockwise order
+    if(lv_gpu_ambiq_nema_draw_polygon(points, point_cnt, clip_area, draw_dsc) == LV_RES_OK)
+    {
+        return;
+    }
+#endif
 
     lv_area_t poly_coords = {.x1 = LV_COORD_MAX, .y1 = LV_COORD_MAX, .x2 = LV_COORD_MIN, .y2 = LV_COORD_MIN};
 

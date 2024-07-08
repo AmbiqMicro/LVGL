@@ -51,7 +51,7 @@ const lv_obj_class_t lv_qrcode_class = {
 lv_obj_t * lv_qrcode_create(lv_obj_t * parent, lv_coord_t size, lv_color_t dark_color, lv_color_t light_color)
 {
    uint32_t buf_size = LV_CANVAS_BUF_SIZE_INDEXED_1BIT(size, size);
-   uint8_t * buf = lv_mem_alloc(buf_size);
+   uint8_t * buf = lv_mem_ssram_alloc(buf_size);
    LV_ASSERT_MALLOC(buf);
    if(buf == NULL) return NULL;
 
@@ -81,9 +81,9 @@ lv_res_t lv_qrcode_update(lv_obj_t * qrcode, const void * data, uint32_t data_le
 
     if(data_len > qrcodegen_BUFFER_LEN_MAX) return LV_RES_INV;
 
-    uint8_t * qr0 = lv_mem_alloc(qrcodegen_BUFFER_LEN_MAX);
+    uint8_t * qr0 = lv_mem_ssram_alloc(qrcodegen_BUFFER_LEN_MAX);
     LV_ASSERT_MALLOC(qr0);
-    uint8_t * data_tmp = lv_mem_alloc(qrcodegen_BUFFER_LEN_MAX);
+    uint8_t * data_tmp = lv_mem_ssram_alloc(qrcodegen_BUFFER_LEN_MAX);
     LV_ASSERT_MALLOC(data_tmp);
     memcpy(data_tmp, data, data_len);
 

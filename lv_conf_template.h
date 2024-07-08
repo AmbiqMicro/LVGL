@@ -24,7 +24,7 @@
  *====================*/
 
 /*Color depth: 1 (1 byte per pixel), 8 (RGB332), 16 (RGB565), 32 (ARGB8888)*/
-#define LV_COLOR_DEPTH 16
+#define LV_COLOR_DEPTH     32
 
 /*Swap the 2 bytes of RGB565 color. Useful if the display has an 8-bit interface (e.g. SPI)*/
 #define LV_COLOR_16_SWAP 0
@@ -48,22 +48,39 @@
 /*1: use custom malloc/free, 0: use the built-in `lv_mem_alloc()` and `lv_mem_free()`*/
 #define LV_MEM_CUSTOM 0
 #if LV_MEM_CUSTOM == 0
-/*Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB)*/
-#  define LV_MEM_SIZE (32U * 1024U)          /*[bytes]*/
 
-/*Set an address for the memory pool instead of allocating it as a normal array. Can be in external SRAM too.*/
-#  define LV_MEM_ADR 0     /*0: unused*/
-/*Instead of an address give a memory allocator that will be called to get a memory pool for LVGL. E.g. my_malloc*/
-#if LV_MEM_ADR == 0
-//#define LV_MEM_POOL_INCLUDE your_alloc_library  /* Uncomment if using an external allocator*/
-//#define LV_MEM_POOL_ALLOC   your_alloc          /* Uncomment if using an external allocator*/
-#endif
+/*Size of the memory available for TCM heap in bytes (>= 2kB)*/
+#  define LV_MEM_TCM_SIZE (32UL * 1024UL)          /*[bytes]*/
+/*Set an address for the TCM heap.*/
+#  define LV_MEM_TCM_ADR (0x10060000UL - 32UL * 1024UL)   /*0: unused*/
+
+/*Size of the memory available for SSRAM heap in bytes*/
+#  define LV_MEM_SSRAM_SIZE (1UL * 1024UL * 1024UL - 0x40UL)          /*[bytes]*/
+/*Set an address for the SSRAM heap.*/
+#  define LV_MEM_SSRAM_ADR (0x10060000UL + 0x40UL)     /*0: unused*/
+
+/*Size of the memory available for PSRAM heap in bytes*/
+#  define LV_MEM_PSRAM_SIZE (16UL * 1024UL * 1024UL)         /*[bytes]*/
+/*Set an address for the PSRAM heap*/
+#  define LV_MEM_PSRAM_ADR (0x14000000UL)    /*0: unused*/
 
 #else       /*LV_MEM_CUSTOM*/
 #  define LV_MEM_CUSTOM_INCLUDE <stdlib.h>   /*Header for the dynamic memory function*/
-#  define LV_MEM_CUSTOM_ALLOC   malloc
-#  define LV_MEM_CUSTOM_FREE    free
-#  define LV_MEM_CUSTOM_REALLOC realloc
+
+/* TCM heap operation */
+#  define LV_MEM_CUSTOM_TCM_ALLOC   malloc
+#  define LV_MEM_CUSTOM_TCM_FREE    free
+#  define LV_MEM_CUSTOM_TCM_REALLOC realloc
+
+/* SSRAM heap operation */
+#  define LV_MEM_CUSTOM_SSRAM_ALLOC   malloc /*Note: this allocator must allocate a buffer align to 8*/
+#  define LV_MEM_CUSTOM_SSRAM_FREE    free
+#  define LV_MEM_CUSTOM_SSRAM_REALLOC realloc
+
+/* PSRAM heap operation */
+#  define LV_MEM_CUSTOM_PSRAM_ALLOC   malloc /*Note: this allocator must allocate a buffer align to 8*/
+#  define LV_MEM_CUSTOM_PSRAM_FREE    free
+#  define LV_MEM_CUSTOM_PSRAM_REALLOC realloc
 #endif     /*LV_MEM_CUSTOM*/
 
 /*Number of the intermediate memory buffer used during rendering and other internal processing mechanisms.
@@ -78,10 +95,10 @@
  *====================*/
 
 /*Default display refresh period. LVG will redraw changed areas with this period time*/
-#define LV_DISP_DEF_REFR_PERIOD 30      /*[ms]*/
+#define LV_DISP_DEF_REFR_PERIOD     2      /*[ms]*/
 
 /*Input device read period in milliseconds*/
-#define LV_INDEV_DEF_READ_PERIOD 30     /*[ms]*/
+#define LV_INDEV_DEF_READ_PERIOD 1     /*[ms]*/
 
 /*Use a custom tick source that tells the elapsed time in milliseconds.
  *It removes the need to manually update the tick with `lv_tick_inc()`)*/
@@ -93,7 +110,7 @@
 
 /*Default Dot Per Inch. Used to initialize default sizes such as widgets sized, style paddings.
  *(Not so important, you can adjust it to modify default sizes and spaces)*/
-#define LV_DPI_DEF 130     /*[px/inch]*/
+#define LV_DPI_DEF                  462     /*[px/inch]*/
 
 /*=======================
  * FEATURE CONFIGURATION
@@ -158,13 +175,29 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #define LV_USE_GPU_NXP_VG_LITE 0
 
 /*Use exnternal renderer*/
+/*Please do not enable this*/
 #define LV_USE_EXTERNAL_RENDERER 0
-
 /*Use SDL renderer API. Requires LV_USE_EXTERNAL_RENDERER*/
 #define LV_USE_GPU_SDL 0
 #if LV_USE_GPU_SDL
 #  define LV_GPU_SDL_INCLUDE_PATH <SDL2/SDL.h>
 #endif
+
+/*Use Ambiq's GPU*/
+#define LV_USE_GPU_AMBIQ_NEMA  1
+#if LV_USE_GPU_AMBIQ_NEMA
+
+//GPU and CPU is working asynchronously, so buffers holding the image texture data 
+//should keep unchanged until current frame refresh is complete. 
+//Enable this if there is any risk that the buffer content is changed while current frame is refreshing.
+#define LV_AMBIQ_NEMA_IMAGE_SYNC 0
+
+
+#endif
+
+//Define this to 0 if you haven't realign the font bitmap, it will cause error when rendering
+//font using GPU.
+#define LV_AMBIQ_FONT_REALIGN_BITMAP  1
 
 /*-------------
  * Logging
@@ -210,6 +243,7 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 #define LV_USE_ASSERT_STYLE         0   /*Check if the styles are properly initialized. (Very fast, recommended)*/
 #define LV_USE_ASSERT_MEM_INTEGRITY 0   /*Check the integrity of `lv_mem` after critical operations. (Slow)*/
 #define LV_USE_ASSERT_OBJ           0   /*Check the object's type and existence (e.g. not deleted). (Slow)*/
+#define LV_USE_ASSERT_GPU           0   /*Check the operations in ambiq gpu library. (Slow)*/
 
 /*Add a custom handler when assert happens e.g. to restart the MCU*/
 #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
@@ -222,14 +256,22 @@ e.g. "stm32f769xx.h" or "stm32f429xx.h"*/
 /*1: Show CPU usage and FPS count in the right bottom corner*/
 #define LV_USE_PERF_MONITOR 0
 #if LV_USE_PERF_MONITOR
-#define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
+#define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_MID
+
+/*Enable this to use the refined performance monitor, user should define a function to get the CPU occupation rate*/
+#define LV_USE_AMBIQ_PERF_MONITOR_REFINED 1
+#if LV_USE_AMBIQ_PERF_MONITOR_REFINED
+#define LV_GET_CPU_OCCUPATION_INCLUDE "Myheader.h"         /*Header for the getCpuOccupationRate API*/
+#define LV_GET_CPU_OCCUPATION (getCpuOccupationRate())    /*get cpu occupation rate api, uint32_t getCpuOccupationRate(void)*/
+#endif
+
 #endif
 
 /*1: Show the used memory and the memory fragmentation in the left bottom corner
  * Requires LV_MEM_CUSTOM = 0*/
 #define LV_USE_MEM_MONITOR 0
 #if LV_USE_PERF_MONITOR
-#define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_LEFT
+#define LV_USE_MEM_MONITOR_POS LV_ALIGN_BOTTOM_MID
 #endif
 
 /*1: Draw random colored rectangles over the redrawn areas*/

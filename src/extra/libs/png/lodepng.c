@@ -75,7 +75,7 @@ static void* lodepng_malloc(size_t size) {
 #ifdef LODEPNG_MAX_ALLOC
   if(size > LODEPNG_MAX_ALLOC) return 0;
 #endif
-  return lv_mem_alloc(size);
+  return lv_mem_ssram_alloc(size);
 }
 
 /* NOTE: when realloc returns NULL, it leaves the original memory untouched */
