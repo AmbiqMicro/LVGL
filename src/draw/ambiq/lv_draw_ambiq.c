@@ -179,13 +179,8 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             break; 
 
         case LV_DRAW_TASK_TYPE_ARC:
-            lv_draw_arc_dsc_t * draw_dsc = task->draw_dsc;
-
-            if(draw_dsc->img_src == NULL)
-            {
-                task->preference_score = 10;
-                task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
-            }
+            task->preference_score = 10;
+            task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
 
         case LV_DRAW_TASK_TYPE_IMAGE:

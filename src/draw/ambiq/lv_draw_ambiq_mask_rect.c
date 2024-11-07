@@ -218,14 +218,12 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     }
 
 
-    nema_cmdlist_t * cl = nema_cl_get_bound();
-    nema_cl_submit(cl);
-    nema_cl_wait(cl);
+    // nema_cmdlist_t * cl = nema_cl_get_bound();
+    // nema_cl_submit(cl);
+    // nema_cl_wait(cl);
+    // nema_cl_rewind(cl);
 
     lv_draw_buf_destroy(mask_buffer);
-
-
-
 }
 
 
