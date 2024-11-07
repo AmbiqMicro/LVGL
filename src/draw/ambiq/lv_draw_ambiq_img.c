@@ -77,6 +77,7 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
 
     /*The whole image is not available, we can't draw it with GPU*/
     if(decoder_dsc.decoded == NULL) {
+        lv_image_decoder_close(&decoder_dsc);
         LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
         return;
     }
@@ -170,6 +171,7 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
 
         lv_area_t clipped_img_area;
         if(!lv_area_intersect(&clipped_img_area, &draw_area, draw_unit->clip_area)) {
+            lv_image_decoder_close(&decoder_dsc);
             return;
         }
 
@@ -177,9 +179,14 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
 
         lv_draw_ambiq_image_core(draw_unit, draw_dsc, &decoder_dsc, 
                                  coords, mask_img);
+        
+        // nema_cmdlist_t * current_cl = nema_cl_get_bound();
+        // nema_cl_submit(current_cl);
+        // nema_cl_wait(current_cl);
+        // nema_cl_rewind(current_cl);
 
-    lv_image_decoder_close(&decoder_dsc);
-    if(need_release_mask_decoder) lv_image_decoder_close(&mask_decoder_dsc);
+        lv_image_decoder_close(&decoder_dsc);
+        if(need_release_mask_decoder) lv_image_decoder_close(&mask_decoder_dsc);
 }
 
 
@@ -254,19 +261,15 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
 
         uint32_t lut_size;
         switch(draw_dsc->header.cf) {
-            case NEMA_L1:
-            case NEMA_L1LE:
+            case LV_COLOR_FORMAT_I1:
                 lut_size = 2U;
                 break;
-            case NEMA_L2:
-            case NEMA_L2LE:
+            case LV_COLOR_FORMAT_I2:
                 lut_size = 4U;
                 break;
-            case NEMA_L4:
-            case NEMA_L4LE:
+            case LV_COLOR_FORMAT_I4:
                 lut_size = 16U;
                 break;
-            // case NEMA_L8:
             default:
                 lut_size = 256U;
                 break;

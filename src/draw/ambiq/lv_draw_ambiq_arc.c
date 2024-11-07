@@ -7,6 +7,7 @@
  *      INCLUDES
  *********************/
 #include "lv_draw_ambiq.h"
+#include "../lv_image_decoder_private.h"
 #if LV_USE_DRAW_AMBIQ
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
@@ -35,6 +36,98 @@
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+
+uint32_t bind_background_image(const lv_draw_arc_dsc_t * dsc, lv_image_decoder_dsc_t* decoder_dsc, uint32_t blending_mode)
+{
+    lv_image_header_t* header = &decoder_dsc->decoded->header;
+    uint32_t bg_color = lv_ambiq_color_convert(dsc->color, dsc->opa);
+    nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
+
+
+    if(dsc->opa < LV_OPA_MAX)
+    {
+        blending_mode |= NEMA_BLOP_MODULATE_A;
+
+        uint32_t global_opa = dsc->opa;
+        nema_set_const_color(global_opa<<24);
+    }
+
+    // handle look up table(LUT) color format
+    if((header->cf == LV_COLOR_FORMAT_I1) ||
+    (header->cf == LV_COLOR_FORMAT_I2) ||
+    (header->cf == LV_COLOR_FORMAT_I4) ||
+    (header->cf == LV_COLOR_FORMAT_I8))
+    {
+        blending_mode |= NEMA_BLOP_LUT;
+
+        uint32_t lut_size;
+        switch(header->cf) {
+            case LV_COLOR_FORMAT_I1:
+                lut_size = 2U;
+                break;
+            case LV_COLOR_FORMAT_I2:
+                lut_size = 4U;
+                break;
+            case LV_COLOR_FORMAT_I4:
+                lut_size = 16U;
+                break;
+            default:
+                lut_size = 256U;
+                break;
+        }
+
+        // LUT/PALETTE
+        nema_bind_tex(NEMA_TEX2,
+                      (uintptr_t)decoder_dsc->palette,
+                      lut_size,
+                      1,
+                      NEMA_BGRA8888,
+                      0,
+                      NEMA_TEX_REPEAT);
+    }
+
+    // handle alpha only color format
+    if((header->cf == LV_COLOR_FORMAT_A1) ||
+    (header->cf == LV_COLOR_FORMAT_A2) ||
+    (header->cf == LV_COLOR_FORMAT_A4) ||
+    (header->cf == LV_COLOR_FORMAT_A8))
+    {
+        nema_set_tex_color(bg_color);
+    }
+    else
+    {
+        nema_set_tex_color(0x0);
+    }
+
+    // handle mask
+    if(header->cf == LV_COLOR_FORMAT_RGB565A8)
+    {
+        nema_bind_tex(NEMA_TEX3,
+                      (uintptr_t)(decoder_dsc->decoded->data + header->h*header->stride),
+                      header->w,
+                      header->h,
+                      NEMA_A8,
+                      -1,
+                      NEMA_TEX_BORDER);
+
+        blending_mode |= NEMA_BLOP_STENCIL_TXTY;
+    }
+
+
+    //bind image
+    uint32_t tex_wrap_mode = NEMA_TEX_BORDER;
+    nema_bind_tex(NEMA_TEX1,
+                (uintptr_t)decoder_dsc->decoded->data,
+                header->w,
+                header->h,
+                nema_cf,
+                -1,
+                NEMA_FILTER_PS|tex_wrap_mode);
+    
+
+    return blending_mode;
+}
+
 
 void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc, const lv_area_t * coords)
 {
@@ -88,53 +181,56 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
     int32_t center_x = dsc->center.x - layer->buf_area.x1;
     int32_t center_y = dsc->center.y - layer->buf_area.y1;
 
+    lv_image_decoder_dsc_t decoder_dsc;
+    bool bind_bg_img = false;
 
     if(dsc->img_src)
     {
-        // //Only set these following two sections as they are used in set_blend_mode.
-        // lv_draw_img_dsc_t bg_img_draw_dsc;
-        // bg_img_draw_dsc.opa = dsc->opa;
-        // bg_img_draw_dsc.recolor = dsc->color;
+        lv_result_t res = lv_image_decoder_open(&decoder_dsc, dsc->img_src, NULL);
+        if(res != LV_RESULT_OK) 
+        {
+            LV_LOG_ERROR("Failed to open image");
+        }
+        else
+        { 
+            if(decoder_dsc.decoded == NULL) 
+            {
+                /*The whole image is not available, we can't draw it with GPU*/
+                LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
+                lv_image_decoder_close(&decoder_dsc);
+            }
+            else
+            {
+                nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(decoder_dsc.header.cf);
+                if(nema_cf == COLOR_FORMAT_INVALID)
+                {
+                    LV_LOG_WARN("GPU failed, not supported color format!");
+                    lv_image_decoder_close(&decoder_dsc);
+                }
+                else
+                {
+                    bind_bg_img = true;
+                }
+            }
+        }
+    }
 
-        // const lv_img_dsc_t* bg_img_dsc =  dsc->img_src;
+    if(bind_bg_img)
+    {
+        blending_mode = bind_background_image(dsc, &decoder_dsc, blending_mode);
 
-        // //Set Blending Mode
-        // set_blend_mode(bg_img_dsc, &bg_img_draw_dsc);
+        //Set Blending Mode
+        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
 
-        // /*Center align*/
-        // lv_area_t area;
-        // area.x1 = center_x - bg_img_header.w / 2;
-        // area.y1 = center_y - bg_img_header.h / 2;
-        // area.x2 = area.x1 + bg_img_header.w - 1;
-        // area.y2 = area.y1 + bg_img_header.h - 1;
+        /*Center align*/
+        lv_area_t area;
+        area.x1 = center_x - decoder_dsc.header.w / 2;
+        area.y1 = center_y - decoder_dsc.header.h / 2;
+        area.x2 = area.x1 + decoder_dsc.header.w - 1;
+        area.y2 = area.y1 + decoder_dsc.header.h - 1;
 
-        // uint32_t tex_mode = NEMA_FILTER_PS |(bg_img_header.morton_order ? NEMA_TEX_MORTON_ORDER : 0);
+        nema_set_matrix_translate((float)area.x1, (float)area.y1);
 
-        // if((bg_img_header.cf >= LV_IMG_CF_INDEXED_1BIT) &&
-        //     (bg_img_header.cf <= LV_IMG_CF_INDEXED_8BIT))
-        // {
-        //     uintptr_t palette_addr   = (uintptr_t)bg_img_dsc->data;
-
-        //     uint8_t px_size       = lv_img_cf_get_px_size(bg_img_header.cf);
-        //     uint32_t palette_size = 1 << px_size;
-        //     uint32_t indices_offset = palette_size * sizeof(lv_color_t);
-        //     uintptr_t indices_addr   = palette_addr + indices_offset;
-        //     nema_bind_lut_tex(indices_addr, 
-        //                       bg_img_header.w, bg_img_header.h,
-        //                       bg_img_nema_cf, -1, tex_mode,
-        //                       palette_addr, NEMA_RGBA8888);
-        // }
-        // else
-        // {
-        //     nema_bind_src_tex((uintptr_t)bg_img_dsc->data,
-        //                   bg_img_header.w,
-        //                   bg_img_header.h,
-        //                   bg_img_nema_cf,
-        //                   -1,
-        //                   tex_mode);
-        // }
-
-        // nema_set_matrix_translate((float)area.x1, (float)area.y1);
     }
     else
     {
@@ -165,6 +261,16 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
 
         nema_raster_stroked_arc_aa(start_cir_x, start_cir_y, width_cir * 0.5f, width_cir, start_angle + 180.f, start_angle + 360.f);
         nema_raster_stroked_arc_aa(end_cir_x, end_cir_y, width_cir * 0.5f, width_cir, end_angle, end_angle + 180.f);
+    }
+
+    if (bind_bg_img)
+    {
+        // nema_cmdlist_t * cl = nema_cl_get_bound();
+        // nema_cl_submit(cl);
+        // nema_cl_wait(cl);
+        // nema_cl_rewind(cl);
+
+        lv_image_decoder_close(&decoder_dsc);
     }
 
     return;
