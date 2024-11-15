@@ -82,6 +82,8 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
         return;
     }
 
+    lv_image_header_t * header = &decoder_dsc.header;
+
 
     const lv_draw_buf_t * mask_img = NULL;
     lv_image_decoder_dsc_t mask_decoder_dsc;
@@ -95,8 +97,8 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
                 if(mask_decoder_dsc.decoded->header.cf == LV_COLOR_FORMAT_A8 ||
                    mask_decoder_dsc.decoded->header.cf == LV_COLOR_FORMAT_L8) {
 
-                    if((mask_decoder_dsc.decoded->header.w == draw_dsc->header.w) && 
-                       (mask_decoder_dsc.decoded->header.h == draw_dsc->header.h))
+                    if((mask_decoder_dsc.decoded->header.w == header->w) && 
+                       (mask_decoder_dsc.decoded->header.h == header->h))
                     {
                         mask_img = mask_decoder_dsc.decoded;
                     }
@@ -129,8 +131,8 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
              LV_LOG_WARN("Set rotation/scale/skew effect to tile image is not supported! We will ignore these parameters.");
         }
 
-        int32_t img_w = draw_dsc->header.w;
-        int32_t img_h = draw_dsc->header.h;
+        int32_t img_w = header->w;
+        int32_t img_h = header->h;
 
         bool width_is_power_of_2 = (img_w > 0) && ((img_w & (img_w - 1)) == 0);
         bool hight_is_power_of_2 = (img_h > 0) && ((img_h & (img_h - 1)) == 0);
@@ -180,10 +182,10 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
         lv_draw_ambiq_image_core(draw_unit, draw_dsc, &decoder_dsc, 
                                  coords, mask_img);
         
-        // nema_cmdlist_t * current_cl = nema_cl_get_bound();
-        // nema_cl_submit(current_cl);
-        // nema_cl_wait(current_cl);
-        // nema_cl_rewind(current_cl);
+        nema_cmdlist_t * current_cl = nema_cl_get_bound();
+        nema_cl_submit(current_cl);
+        nema_cl_wait(current_cl);
+        //nema_cl_rewind(current_cl);
 
         lv_image_decoder_close(&decoder_dsc);
         if(need_release_mask_decoder) lv_image_decoder_close(&mask_decoder_dsc);
@@ -202,7 +204,9 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
                                     const lv_draw_buf_t* mask_image)
 {
 
-    nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(draw_dsc->header.cf);
+    lv_image_header_t*  header = &decoder_dsc->header;   
+
+    nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     if(nema_cf == COLOR_FORMAT_INVALID)
     {
         LV_LOG_WARN("GPU failed, not supported color format!");
@@ -252,15 +256,15 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
     }
 
     // handle look up table(LUT) color format
-    if((draw_dsc->header.cf == LV_COLOR_FORMAT_I1) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_I2) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_I4) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_I8))
+    if((header->cf == LV_COLOR_FORMAT_I1) ||
+    (header->cf == LV_COLOR_FORMAT_I2) ||
+    (header->cf == LV_COLOR_FORMAT_I4) ||
+    (header->cf == LV_COLOR_FORMAT_I8))
     {
         blending_mode |= NEMA_BLOP_LUT;
 
         uint32_t lut_size;
-        switch(draw_dsc->header.cf) {
+        switch(header->cf) {
             case LV_COLOR_FORMAT_I1:
                 lut_size = 2U;
                 break;
@@ -286,10 +290,10 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
     }
 
     // handle alpha only color format
-    if((draw_dsc->header.cf == LV_COLOR_FORMAT_A1) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_A2) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_A4) ||
-    (draw_dsc->header.cf == LV_COLOR_FORMAT_A8))
+    if((header->cf == LV_COLOR_FORMAT_A1) ||
+    (header->cf == LV_COLOR_FORMAT_A2) ||
+    (header->cf == LV_COLOR_FORMAT_A4) ||
+    (header->cf == LV_COLOR_FORMAT_A8))
     {
         nema_set_tex_color(recolor_rgba);
     }
@@ -299,10 +303,10 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
     }
 
     // handle mask
-    if((mask_image) || (draw_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8))
+    if((mask_image) || (header->cf == LV_COLOR_FORMAT_RGB565A8))
     {
 
-        if(mask_image && draw_dsc->header.cf != LV_COLOR_FORMAT_RGB565A8)
+        if(mask_image && header->cf != LV_COLOR_FORMAT_RGB565A8)
         {
             nema_bind_tex(NEMA_TEX3,
                           (uintptr_t)mask_image->data,
@@ -313,17 +317,17 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
                           NEMA_TEX_BORDER);
 
         }
-        else if(!mask_image && draw_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8)
+        else if(!mask_image && header->cf == LV_COLOR_FORMAT_RGB565A8)
         {
             nema_bind_tex(NEMA_TEX3,
-                          (uintptr_t)(decoder_dsc->decoded->data + draw_dsc->header.h*draw_dsc->header.stride),
-                          draw_dsc->header.w,
-                          draw_dsc->header.h,
+                          (uintptr_t)(decoder_dsc->decoded->data + header->h*header->stride),
+                          header->w,
+                          header->h,
                           NEMA_A8,
                           -1,
                           NEMA_TEX_BORDER);
         }
-        else if(mask_image && draw_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8)
+        else if(mask_image && header->cf == LV_COLOR_FORMAT_RGB565A8)
         {
             //TODO:
             //malloc a buffer
@@ -343,8 +347,8 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
     bool tile_draw_one_by_one = false;
     if(draw_dsc->tile)
     {
-        int32_t img_w = draw_dsc->header.w;
-        int32_t img_h = draw_dsc->header.h;
+        int32_t img_w = header->w;
+        int32_t img_h = header->h;
 
         bool width_is_power_of_2 = (img_w > 0) && ((img_w & (img_w - 1)) == 0);
         bool hight_is_power_of_2 = (img_h > 0) && ((img_h & (img_h - 1)) == 0);
@@ -379,8 +383,8 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
     uint32_t tex_wrap_mode = (draw_dsc->tile && !tile_draw_one_by_one) ? NEMA_TEX_REPEAT : NEMA_TEX_BORDER;
     nema_bind_tex(NEMA_TEX1,
                 (uintptr_t)decoder_dsc->decoded->data,
-                draw_dsc->header.w,
-                draw_dsc->header.h,
+                header->w,
+                header->h,
                 nema_cf,
                 -1,
                 NEMA_FILTER_BL|tex_wrap_mode);
@@ -399,8 +403,8 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
         }
         else{
             lv_area_t tile_area;
-            uint32_t img_w = draw_dsc->header.w;
-            uint32_t img_h = draw_dsc->header.h;
+            uint32_t img_w = header->w;
+            uint32_t img_h = header->h;
             if(lv_area_get_width(&draw_dsc->image_area) >= 0) {
                 tile_area = draw_dsc->image_area;
             }

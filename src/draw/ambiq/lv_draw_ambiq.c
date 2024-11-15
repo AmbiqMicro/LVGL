@@ -61,6 +61,11 @@ void lv_draw_ambiq_init(void)
     draw_ambiq_unit->total_cl = 0;
     draw_ambiq_unit->small_texture_buffer_size_byte = 256;
     draw_ambiq_unit->small_texture_buffer  = nema_buffer_create_pool(NEMA_MEM_POOL_CL_RB, draw_ambiq_unit->small_texture_buffer_size_byte);
+#if LV_USE_VECTOR_GRAPHIC
+    draw_ambiq_unit->vg_path = nema_vg_path_create();
+    draw_ambiq_unit->vg_paint = nema_vg_paint_create();
+    draw_ambiq_unit->vg_grad = nema_vg_gradient_create();
+#endif
 
 #if LV_USE_OS
     lv_thread_init(&draw_ambiq_unit->thread, LV_THREAD_PRIO_HIGH, render_thread_cb, 8 * 1024, draw_ambiq_unit);
@@ -101,7 +106,7 @@ void lv_draw_ambiq_deinit(void)
     //     return ;   
     // }
 
-#if LV_USE_AMBIQ_VG
+#if LV_USE_DRAW_AMBIQ_VG
     //This will release the internal buffer in NemaVG.
     nema_vg_deinit();
 #endif
@@ -120,6 +125,15 @@ static int32_t lv_draw_ambiq_delete(lv_draw_unit_t * draw_unit)
     }
 
     nema_buffer_destroy(&draw_ambiq_unit->small_texture_buffer);
+
+    //Release VG path
+    nema_vg_path_destroy(draw_ambiq_unit->vg_path);
+
+    //Release VG paint
+    nema_vg_paint_destroy(draw_ambiq_unit->vg_paint);
+
+    //Release VG gradient
+    nema_vg_gradient_destroy(draw_ambiq_unit->vg_grad);
 
 #if LV_USE_OS
     LV_LOG_INFO("cancel Ambiq GPU rendering thread");
@@ -179,6 +193,11 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             break; 
 
         case LV_DRAW_TASK_TYPE_ARC:
+            task->preference_score = 10;
+            task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
+            break;
+
+        case LV_DRAW_TASK_TYPE_LAYER:
             task->preference_score = 10;
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
@@ -316,6 +335,8 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
 
     nema_cl_bind(&cl);
 
+    nema_cl_rewind(&cl);
+
     nema_tex_format_t des_format = lv_ambiq_color_format_map_des(draw_buf->header.cf);
     if(des_format == COLOR_FORMAT_INVALID)
     {
@@ -361,6 +382,10 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
         case LV_DRAW_TASK_TYPE_MASK_RECTANGLE:
             lv_draw_ambiq_mask_rect((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
             break;
+        case LV_DRAW_TASK_TYPE_LAYER:
+            lv_draw_ambiq_layer((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            break;
+
         default:
             break;
     }
