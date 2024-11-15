@@ -54,7 +54,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     lv_area_t * buf_area = &target_layer->buf_area;
     lv_area_t clear_area;
 
-    void * draw_buf = target_layer->draw_buf;
+    //void * draw_buf = target_layer->draw_buf;
 
     /* set the blend mode to SRC*/
     nema_set_blend(NEMA_BL_SRC, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
