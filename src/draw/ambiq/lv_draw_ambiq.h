@@ -54,11 +54,16 @@ extern "C" {
 #include "nema_matrix3x3.h"
 #include "nema_programHW.h"
 
-#if LV_USE_AMBIQ_VG
+#if LV_USE_DRAW_AMBIQ_VG
 #include "nema_vg.h"
+#include "nema_vg_paint.h"
+#include "nema_vg_path.h"
 #include "nema_vg_font.h"
 #include "nema_vg_tsvg.h"
+#include "nema_vg_context.h"
 #endif
+
+#include "gpu_patch.h"
 
 /*********************
  *      DEFINES
@@ -94,6 +99,18 @@ typedef struct {
     nema_buffer_t small_texture_buffer;
 
     uint32_t small_texture_buffer_size_byte;
+
+#if LV_USE_VECTOR_GRAPHIC
+
+    //! VG path handle
+    NEMA_VG_PATH_HANDLE  vg_path;
+
+    //! VG paint handle
+    NEMA_VG_PAINT_HANDLE vg_paint;
+
+    //! VG gradient handle
+    NEMA_VG_GRAD_HANDLE vg_grad;
+#endif
 
 } lv_draw_ambiq_unit_t;
 
