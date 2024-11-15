@@ -47,6 +47,7 @@ void lv_demo_scroll(void)
     lv_obj_center(panel);
     lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(panel, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_radius(panel, 30, 0);
 
     list = lv_list_create(panel);
     lv_list_add_button(list, LV_SYMBOL_IMAGE, "Image1.png");
@@ -59,6 +60,7 @@ void lv_demo_scroll(void)
     lv_list_add_button(list, LV_SYMBOL_IMAGE, "Image8.png");
     lv_list_add_button(list, LV_SYMBOL_IMAGE, "Image9.png");
     lv_list_add_button(list, LV_SYMBOL_IMAGE, "Image10.png");
+    lv_obj_set_style_radius(list, 30, 0);
 
     switch_create(panel, "Scrollable", LV_OBJ_FLAG_SCROLLABLE, true);
     switch_create(panel, "Scroll chain", LV_OBJ_FLAG_SCROLL_CHAIN, true);
