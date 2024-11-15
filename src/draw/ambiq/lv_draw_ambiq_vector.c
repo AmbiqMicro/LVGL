@@ -17,6 +17,8 @@
 #error "LV_USE_VECTOR_GRAPHIC requires LV_USE_DRAW_AMBIQ_VG 1"
 #endif
 
+#include <math.h>
+
 
 
 /*********************
@@ -34,8 +36,6 @@
  **********************/
 
 static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_draw_dsc_t * dsc);
-
-static void lv_path_to_vg(NEMA_VG_PATH_HANDLE * dest, const lv_vector_path_t * src);
 
 /**********************
  *  STATIC VARIABLES
@@ -63,14 +63,14 @@ void lv_draw_ambiq_vector(lv_draw_unit_t * draw_unit, const lv_draw_vector_task_
 
     nema_matrix3x3_t matrix;
 
-    nema_mat3x3_load_identity(&matrix);
+    nema_mat3x3_load_identity(matrix);
 
     int32_t layer_start_x = layer->buf_area.x1;
     int32_t layer_start_y = layer->buf_area.y1;
 
-    nema_mat3x3_translate(&matrix, -layer_start_x, -layer_start_y);
+    nema_mat3x3_translate(matrix, -layer_start_x, -layer_start_y);
 
-    nema_vg_set_global_matrix(&matrix);
+    nema_vg_set_global_matrix(matrix);
 
     /*handle each path*/
 
@@ -190,77 +190,6 @@ static nema_tex_mode_t lv_vector_grad_spread_to_nema(lv_vector_gradient_spread_t
     }
 }
 
-uint32_t bind_background_image(const lv_draw_image_dsc_t * img_dsc, lv_image_decoder_dsc_t* decoder_dsc)
-{
-    lv_image_header_t* header = &decoder_dsc->decoded->header;
-    uint32_t bg_color = lv_ambiq_color_convert(img_dsc->recolor, img_dsc->recolor_opa);
-    nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
-
-
-    // handle look up table(LUT) color format
-    if((header->cf == LV_COLOR_FORMAT_I1) ||
-    (header->cf == LV_COLOR_FORMAT_I2) ||
-    (header->cf == LV_COLOR_FORMAT_I4) ||
-    (header->cf == LV_COLOR_FORMAT_I8))
-    {
-
-        nema_vg_bind
-
-        blending_mode |= NEMA_BLOP_LUT;
-
-        uint32_t lut_size;
-        switch(header->cf) {
-            case LV_COLOR_FORMAT_I1:
-                lut_size = 2U;
-                break;
-            case LV_COLOR_FORMAT_I2:
-                lut_size = 4U;
-                break;
-            case LV_COLOR_FORMAT_I4:
-                lut_size = 16U;
-                break;
-            default:
-                lut_size = 256U;
-                break;
-        }
-
-        // LUT/PALETTE
-        nema_bind_tex(NEMA_TEX2,
-                      (uintptr_t)decoder_dsc->palette,
-                      lut_size,
-                      1,
-                      NEMA_BGRA8888,
-                      0,
-                      NEMA_TEX_REPEAT);
-    }
-
-    // handle alpha only color format
-    if((header->cf == LV_COLOR_FORMAT_A1) ||
-    (header->cf == LV_COLOR_FORMAT_A2) ||
-    (header->cf == LV_COLOR_FORMAT_A4) ||
-    (header->cf == LV_COLOR_FORMAT_A8))
-    {
-        nema_set_tex_color(bg_color);
-    }
-    else
-    {
-        nema_set_tex_color(0x0);
-    }
-
-
-    //bind image
-    uint32_t tex_wrap_mode = NEMA_TEX_BORDER;
-    nema_bind_tex(NEMA_TEX1,
-                (uintptr_t)decoder_dsc->decoded->data,
-                header->w,
-                header->h,
-                nema_cf,
-                -1,
-                NEMA_FILTER_PS|tex_wrap_mode);
-    
-
-}
-
 static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
                                     const lv_draw_image_dsc_t * img_dsc)
 {
@@ -308,8 +237,8 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     bool LUT_texture = false;
 
-    nema_image_obj_t* img_obj = lv_malloc(sizeof(nema_image_obj_t));
-    nema_image_obj_t* palette_obj = lv_malloc(sizeof(nema_image_obj_t));
+    nema_img_obj_t* img_obj = lv_malloc(sizeof(nema_img_obj_t));
+    nema_img_obj_t* palette_obj = lv_malloc(sizeof(nema_img_obj_t));
 
     //bind image
     img_obj->bo.base_virt = (void *)decoder_dsc.decoded->data;
@@ -387,9 +316,6 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
     /*clear paint*/
     nema_vg_paint_clear(vg_paint);
 
-    /* clear gradient*/
-    nema_vg_gradient_clear(vg_grad);
-
     /* set fill rule*/
     uint32_t file_rule = lv_vector_fill_rule_to_nema(dsc->fill_rule);
     nema_vg_set_fill_rule(file_rule);
@@ -400,7 +326,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
     if(dsc->style == LV_VECTOR_DRAW_STYLE_SOLID)
     {
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_COLOR);
-        nema_vg_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->opa));
+        nema_vg_paint_set_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->opa));
     }
     else if(dsc->style == LV_VECTOR_DRAW_STYLE_GRADIENT)
     {    
@@ -432,7 +358,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
 
             p3.x = dsc->gradient.cx;
             p3.y = dsc->gradient.cy;
-            s = dsc->matrix[0][0] * dsc->matrix[1][1] - dsc->matrix[0][1] * dsc->matrix[1][0];
+            s = dsc->matrix.m[0][0] * dsc->matrix.m[1][1] - dsc->matrix.m[0][1] * dsc->matrix.m[1][0];
             LV_ASSERT_MSG(s <= 0, "matrix is not invertible");
             s = sqrt(s);
             new_r = dsc->gradient.cr * s;
@@ -455,7 +381,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_TEXTURE);
 
         lv_vector_image_to_nema(vg_paint, &dsc->img_dsc);
-        nema_vg_paint_set_tex_matrix(vg_paint, dsc->matrix->m);
+        nema_vg_paint_set_tex_matrix(vg_paint, dsc->matrix.m);
     }
     else
     {
@@ -496,9 +422,6 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
     /*clear paint*/
     nema_vg_paint_clear(vg_paint);
 
-    /* clear gradient*/
-    nema_vg_gradient_clear(vg_grad);
-
     /* set fill rule*/
     nema_vg_set_fill_rule(NEMA_VG_STROKE);
 
@@ -509,7 +432,8 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
     nema_vg_stroke_set_width(dsc->width);
 
     /*set stroke cap*/
-    nema_vg_stroke_set_cap_style(lv_vector_stroke_cap_to_nema(dsc->cap));
+    uint8_t cap_style = lv_vector_stroke_cap_to_nema(dsc->cap);
+    nema_vg_stroke_set_cap_style(cap_style, cap_style);
 
     /*set stroke join*/
     nema_vg_stroke_set_join_style(lv_vector_stroke_join_to_nema(dsc->join));
@@ -525,7 +449,7 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
     if(dsc->style == LV_VECTOR_DRAW_STYLE_SOLID)
     {
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_COLOR);
-        nema_vg_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->opa));
+        nema_vg_paint_set_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->opa));
     }
     else if(dsc->style == LV_VECTOR_DRAW_STYLE_GRADIENT)
     {    
@@ -566,7 +490,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
     lv_draw_ambiq_unit_t *unit = (lv_draw_ambiq_unit_t *)ctx;
 
     /*set clip*/
-    lv_layer_t * layer = dsc->base.layer;
+    lv_layer_t * layer = unit->base_unit.target_layer;
     int32_t layer_start_x = layer->buf_area.x1;
     int32_t layer_start_y = layer->buf_area.y1;   
 
@@ -609,7 +533,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
                             path->points.size*2, (nema_vg_float_t*)path->points.data);
 
     /*set path matrix*/
-    nema_vg_path_set_matrix(unit->vg_path, (nema_matrix3x3_t*)&dsc->matrix.m);
+    nema_vg_path_set_matrix(unit->vg_path, dsc->matrix.m);
 
     /* fill  */
     if(dsc->fill_dsc.opa != LV_OPA_TRANSP) {
@@ -625,9 +549,9 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
 
     /* free the allocated memory*/
     nema_img_obj_t * ptr_img_obj;
-    nema_img_obj_t * ptr_palette_obj
+    nema_img_obj_t * ptr_palette_obj;
 
-    lv_ambiq_get_vg_paint_tex(unit->vg_paint, &ptr_img_obj, &ptr_palette_obj)
+    lv_ambiq_get_vg_paint_tex(unit->vg_paint, &ptr_img_obj, &ptr_palette_obj);
     if(ptr_img_obj)
     {
         lv_free(ptr_img_obj);

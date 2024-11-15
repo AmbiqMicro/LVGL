@@ -39,7 +39,7 @@
 
 uint32_t bind_background_image(const lv_draw_arc_dsc_t * dsc, lv_image_decoder_dsc_t* decoder_dsc, uint32_t blending_mode)
 {
-    lv_image_header_t* header = &decoder_dsc->decoded->header;
+    const lv_image_header_t* header = &decoder_dsc->decoded->header;
     uint32_t bg_color = lv_ambiq_color_convert(dsc->color, dsc->opa);
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
 

@@ -9,8 +9,6 @@
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
 
-#include "lv_draw_ambiq_gradient.h"
-
 /*********************
  *      DEFINES
  *********************/
