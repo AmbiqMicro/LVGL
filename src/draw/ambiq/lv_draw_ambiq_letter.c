@@ -67,7 +67,7 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_unit_t * draw_unit, lv_
                                                  lv_draw_fill_dsc_t * fill_draw_dsc, const lv_area_t * fill_area)
 {
 
-    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)draw_unit;
+    //lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)draw_unit;
     lv_layer_t * layer = draw_unit->target_layer;
 
     if (fill_draw_dsc == NULL && glyph_draw_dsc == NULL) {
@@ -135,7 +135,7 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_unit_t * draw_unit, lv_
                         nema_set_const_color(color); 
                     }
                     nema_set_tex_color(color);
-                    nema_bind_src_tex(draw_buf->data, draw_buf->header.w, draw_buf->header.h, NEMA_A8, draw_buf->header.stride, NEMA_FILTER_PS);
+                    nema_bind_src_tex((uintptr_t)draw_buf->data, draw_buf->header.w, draw_buf->header.h, NEMA_A8, draw_buf->header.stride, NEMA_FILTER_PS);
 
                     nema_matrix3x3_t m;
                     nema_mat3x3_load_identity(m);

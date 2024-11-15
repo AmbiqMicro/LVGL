@@ -64,7 +64,7 @@ void lv_draw_ambiq_init(void)
 #if LV_USE_VECTOR_GRAPHIC
     draw_ambiq_unit->vg_path = nema_vg_path_create();
     draw_ambiq_unit->vg_paint = nema_vg_paint_create();
-    draw_ambiq_unit->vg_grad = nema_vg_gradient_create();
+    draw_ambiq_unit->vg_grad = nema_vg_grad_create();
 #endif
 
 #if LV_USE_OS
@@ -133,7 +133,7 @@ static int32_t lv_draw_ambiq_delete(lv_draw_unit_t * draw_unit)
     nema_vg_paint_destroy(draw_ambiq_unit->vg_paint);
 
     //Release VG gradient
-    nema_vg_gradient_destroy(draw_ambiq_unit->vg_grad);
+    nema_vg_grad_destroy(draw_ambiq_unit->vg_grad);
 
 #if LV_USE_OS
     LV_LOG_INFO("cancel Ambiq GPU rendering thread");

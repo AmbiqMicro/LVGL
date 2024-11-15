@@ -33,7 +33,6 @@ extern "C" {
 #include "../../misc/lv_area_private.h"
 
 #include "lv_draw_ambiq_color.h"
-#include "lv_draw_ambiq_gradient.h"
 
 #include "am_mcu_apollo.h"
 
