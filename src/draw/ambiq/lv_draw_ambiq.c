@@ -231,6 +231,11 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             task->preference_score = 10;
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
+
+        case LV_DRAW_TASK_TYPE_VECTOR:
+            task->preference_score = 10;
+            task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
+            break;
         default:
             break;
     }
@@ -331,9 +336,9 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
     /* Invalidate the drawing area */
     lv_draw_buf_invalidate_cache(draw_buf, &draw_area);
 
-    nema_cmdlist_t cl = nema_cl_create();
+    nema_cmdlist_t cl = nema_cl_create_sized(10*1024);
 
-    nema_cl_bind(&cl);
+    nema_cl_bind_circular(&cl);
 
     nema_cl_rewind(&cl);
 
@@ -385,6 +390,9 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
         case LV_DRAW_TASK_TYPE_LAYER:
             lv_draw_ambiq_layer((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
             break;
+        case LV_DRAW_TASK_TYPE_VECTOR:
+            lv_draw_ambiq_vector((lv_draw_unit_t *)u, t->draw_dsc);
+            break;
 
         default:
             break;
@@ -393,6 +401,18 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
     nema_cl_submit(&cl);
 
     nema_cl_wait(&cl);
+
+    uint32_t nema_error_code = nema_get_error();
+    if(nema_error_code != NEMA_ERR_NO_ERROR)
+    {
+        LV_LOG_ERROR("NemaVG error: 0x%08lX", nema_error_code);
+    }
+
+    uint32_t nema_vg_error_code = nema_vg_get_error();
+    if(nema_vg_error_code != NEMA_VG_ERR_NO_ERROR)
+    {
+        LV_LOG_ERROR("NemaVG error: 0x%08lX", nema_vg_error_code);
+    }
 
     nema_cl_destroy(&cl);
 
