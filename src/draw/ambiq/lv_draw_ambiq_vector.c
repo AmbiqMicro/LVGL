@@ -40,6 +40,10 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
 /**********************
  *  STATIC VARIABLES
  **********************/
+static float aabb_min_x = 0;
+static float aabb_min_y = 0;
+static float aabb_max_x = 0;
+static float aabb_max_y = 0;
 
 /**********************
  *      MACROS
@@ -127,32 +131,28 @@ static uint32_t lv_vector_quality_to_nema(lv_vector_path_quality_t quality)
     }
 }
 
-static void lv_vector_path_to_nema(lv_array_t * dest, const lv_array_t * src)
+static void lv_vector_path_to_nema(uint8_t * dest, const lv_array_t * src)
 {
-    lv_array_deinit(dest);
-    lv_array_init(dest, lv_array_size(src), sizeof(uint8_t));
-
 
     lv_vector_path_op_t * op = lv_array_front(src);
-    uint8_t* dest_data = lv_array_front(dest);
 
     uint32_t size = lv_array_size(src);
     for(uint32_t i = 0; i < size; i++) {
         switch(op[i]) {
             case LV_VECTOR_PATH_OP_MOVE_TO: 
-                dest_data[i] = NEMA_VG_PRIM_MOVE;
+                dest[i] = NEMA_VG_PRIM_MOVE;
                 break;
             case LV_VECTOR_PATH_OP_LINE_TO:
-                dest_data[i] = NEMA_VG_PRIM_LINE;
+                dest[i] = NEMA_VG_PRIM_LINE;
                 break;
             case LV_VECTOR_PATH_OP_QUAD_TO:
-                dest_data[i] = NEMA_VG_PRIM_BEZIER_QUAD;
+                dest[i] = NEMA_VG_PRIM_BEZIER_QUAD;
                 break;
             case LV_VECTOR_PATH_OP_CUBIC_TO:
-                dest_data[i] = NEMA_VG_PRIM_BEZIER_CUBIC;
+                dest[i] = NEMA_VG_PRIM_BEZIER_CUBIC;
                 break;
             case LV_VECTOR_PATH_OP_CLOSE: 
-                dest_data[i] = NEMA_VG_PRIM_CLOSE;
+                dest[i] = NEMA_VG_PRIM_CLOSE;
                 break;
         }
     }
@@ -171,8 +171,6 @@ static void lv_vector_grad_color_to_nema(NEMA_VG_GRAD_HANDLE  vg_grad, const lv_
         stops_colors[i].b = grad->stops[i].color.blue;
     }
     
-
-    nema_vg_grad_clear(vg_grad);
     nema_vg_grad_set(vg_grad, grad->stops_count, stops, stops_colors);
 }
 
@@ -326,7 +324,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
     if(dsc->style == LV_VECTOR_DRAW_STYLE_SOLID)
     {
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_COLOR);
-        nema_vg_paint_set_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->opa));
+        nema_vg_paint_set_paint_color(vg_paint, nema_rgba(dsc->color.red, dsc->color.green, dsc->color.blue, dsc->color.alpha));
     }
     else if(dsc->style == LV_VECTOR_DRAW_STYLE_GRADIENT)
     {    
@@ -340,11 +338,16 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
 
             p1.x = dsc->gradient.x1;
             p1.y = dsc->gradient.y1;
-            p2.x = dsc->gradient.x2;
-            p2.y = dsc->gradient.y2;
+            p2.x = dsc->gradient.x2 - dsc->gradient.x1;
+            p2.y = dsc->gradient.y2 - dsc->gradient.y1;
 
-            lv_matrix_transform_point(&dsc->matrix, &p1);
-            lv_matrix_transform_point(&dsc->matrix, &p2);
+            // lv_matrix_transform_point(&dsc->matrix, &p1);
+            //lv_matrix_transform_point(&dsc->matrix, &p2);
+            //nema_mat3x3_invert(dsc->matrix.m);
+            nema_mat3x3_mul_vec(&dsc->matrix, &p2.x, &p2.y);
+
+            p2.x += dsc->gradient.x1;
+            p2.y += dsc->gradient.y1;            
 
             nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_GRAD_LINEAR);
             nema_vg_paint_set_grad_linear(vg_paint, vg_grad, p1.x, p1.y, p2.x, p2.y, sampling_mode);
@@ -359,7 +362,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
             p3.x = dsc->gradient.cx;
             p3.y = dsc->gradient.cy;
             s = dsc->matrix.m[0][0] * dsc->matrix.m[1][1] - dsc->matrix.m[0][1] * dsc->matrix.m[1][0];
-            LV_ASSERT_MSG(s <= 0, "matrix is not invertible");
+            LV_ASSERT_MSG(s > 0, "matrix is not invertible");
             s = sqrt(s);
             new_r = dsc->gradient.cr * s;
 
@@ -377,11 +380,13 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
     }
     else if(dsc->style == LV_VECTOR_DRAW_STYLE_PATTERN)
     {
-        // TODO: support pattern
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_TEXTURE);
 
         lv_vector_image_to_nema(vg_paint, &dsc->img_dsc);
+        nema_vg_paint_lock_tran_to_path(vg_paint, 1);
+        lv_matrix_translate(&(dsc->matrix), aabb_min_x, aabb_min_y);
         nema_vg_paint_set_tex_matrix(vg_paint, dsc->matrix.m);
+
     }
     else
     {
@@ -514,10 +519,11 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
     /* covert blend mode*/
     uint32_t blend = lv_vector_blend_to_nema(dsc->blend_mode);
     if(blend == 0xffffffff) {
-        LV_LOG_WARN("unsupported blend mode: %d, use NEMA_BL_SRC_OVER instead.", dsc->blend_mode);
-        blend = NEMA_BL_SRC_OVER;
-        return;
+        LV_LOG_WARN("unsupported blend mode: %d, use NEMA_BL_SIMPLE instead.", dsc->blend_mode);
+        blend = NEMA_BL_SIMPLE;
     }
+    nema_vg_set_blend(blend);
+
 
     /* set path quality */
     uint32_t quality = lv_vector_quality_to_nema(path->quality);
@@ -527,10 +533,17 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
     nema_vg_path_clear(unit->vg_path);
 
     /* convert path */
-    lv_array_t vg_path_seg;
-    lv_vector_path_to_nema(&vg_path_seg, &path->ops);
-    nema_vg_path_set_shape(unit->vg_path, vg_path_seg.size, vg_path_seg.data, 
+    uint8_t* vg_path_seg = lv_malloc(path->ops.size);
+    if(vg_path_seg == NULL)
+    {
+        LV_LOG_ERROR("Failed to allocate memory for vg_path_seg");
+        return;
+    }
+
+    lv_vector_path_to_nema(vg_path_seg, &path->ops);
+    nema_vg_path_set_shape(unit->vg_path, path->ops.size, vg_path_seg, 
                             path->points.size*2, (nema_vg_float_t*)path->points.data);
+    lv_ambiq_get_path_aabb(unit->vg_path, &aabb_min_x, &aabb_min_y, &aabb_max_x, &aabb_max_y);
 
     /*set path matrix*/
     nema_vg_path_set_matrix(unit->vg_path, dsc->matrix.m);
@@ -562,9 +575,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
         lv_free(ptr_palette_obj);
     }
 
-    lv_array_deinit(&vg_path_seg);
-
-
+    lv_free(vg_path_seg);
 
     LV_PROFILER_END;
 }
