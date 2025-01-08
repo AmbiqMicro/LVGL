@@ -111,6 +111,14 @@ typedef struct {
     NEMA_VG_GRAD_HANDLE vg_grad;
 #endif
 
+    // //! link list of inserted command lists
+    // lv_ll_t inserted_cl_ll;
+
+    //! mutex for inserted_cl_ll, prevent ll operations from different threads
+    lv_mutex_t mutex_nema_context;
+
+    uint32_t nema_context_lock_count;
+
 } lv_draw_ambiq_unit_t;
 
 /**********************
@@ -233,6 +241,14 @@ void lv_draw_ambiq_transform(lv_draw_unit_t * draw_unit, const lv_area_t * dest_
  */
 void lv_draw_ambiq_vector(lv_draw_unit_t * draw_unit, const lv_draw_vector_task_dsc_t * dsc);
 #endif
+
+/**
+ * Initialize the draw buffer handlers, see lv_ambiq_buffer.c.
+ */
+void lv_draw_ambiq_init_buf_handlers(void);
+
+lv_result_t lv_draw_ambiq_nema_context_lock(void);
+lv_result_t lv_draw_ambiq_nema_context_unlock(void);
 
 /***********************
  * GLOBAL VARIABLES
