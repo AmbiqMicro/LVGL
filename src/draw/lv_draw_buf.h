@@ -85,6 +85,11 @@ typedef void (*lv_draw_buf_cache_operation_cb)(const lv_draw_buf_t * draw_buf, c
 
 typedef uint32_t (*lv_draw_buf_width_to_stride_cb)(uint32_t w, lv_color_format_t color_format);
 
+typedef void (*lv_draw_buf_clear_cb)(lv_draw_buf_t * draw_buf, const lv_area_t * a);
+
+typedef void (*lv_draw_buf_copy_cb)(lv_draw_buf_t * dest, const lv_area_t * dest_area,
+                                    const lv_draw_buf_t * src, const lv_area_t * src_area);
+
 struct _lv_draw_buf_t {
     lv_image_header_t header;
     uint32_t data_size;       /**< Total buf size in bytes */
