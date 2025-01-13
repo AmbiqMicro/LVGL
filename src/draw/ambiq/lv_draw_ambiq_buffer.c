@@ -18,9 +18,6 @@
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
 
-#define container_of(ptr, type, member) \
-    ((type *)((char *)(ptr) - offsetof(type, member)))
-
 
 /*********************
  *      DEFINES
@@ -66,6 +63,8 @@ static inline void lv_draw_ambiq_buffer_free_core(uint32_t pool, void * buf)
         .fd = pool,
         .size = 0,/*not used in nema_buffer_destroy API*/
     };
+
+    LV_ASSERT_MSG(nema_buffer_is_within_pool(pool, (uint32_t)buf, 0), "Buffer is not within the pool");
     nema_buffer_destroy(&nema_buf);
 }
 
@@ -98,6 +97,7 @@ static inline void lv_draw_ambiq_buffer_flush_core(uint32_t pool, const lv_draw_
         .size = draw_buf->data_size,
     };
 
+    LV_ASSERT_MSG(nema_buffer_is_within_pool(pool, (uint32_t)draw_buf->data, draw_buf->data_size), "Buffer is not within the pool");
     nema_buffer_flush(&nema_buf);   
 }
 
@@ -110,16 +110,16 @@ static void lv_draw_ambiq_buffer_invalidate_core(uint32_t pool, const lv_draw_bu
         .size = draw_buf->data_size,
     };
 
+    LV_ASSERT_MSG(nema_buffer_is_within_pool(pool, (uint32_t)draw_buf->data, draw_buf->data_size), "Buffer is not within the pool");
     nema_buffer_invalidate(&nema_buf);   
 }
 
 
 
 
-static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, lv_area_t* a)
+static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t* a)
 {
     const lv_image_header_t * header = &draw_buf->header;
-    uint32_t stride = header->stride;
 
     lv_area_t a_draw_buf;
     a_draw_buf.x1 = 0;
@@ -225,36 +225,45 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
                       const lv_draw_buf_t * src, const lv_area_t * src_area)
 {
     /*Using the GPU for color format conversion is straightforward, 
-    but we aim to avoid handling too many edge cases in this context.*/
+    but we aim to avoid handling too many corner cases in this context.*/
     LV_ASSERT_FORMAT_MSG(dest->header.cf == src->header.cf, "Color format mismatch: %d != %d",
                          dest->header.cf, src->header.cf);
 
     const lv_image_header_t * dest_header = &dest->header;
     const lv_image_header_t * src_header = &src->header;
-    int32_t line_width_dest;
-    int32_t line_hight_dest;
-    int32_t line_width_src;
-    int32_t line_hight_src;
+    int32_t start_x_src, start_y_src;
+    int32_t start_x_dest, start_y_dest;
+    int32_t line_width_dest, line_hight_dest;
+    int32_t line_width_src, line_hight_src;
+
     if(dest_area == NULL) 
     {
-        line_width_dest = dest->header.w;
-        line_hight_dest = dest->header.h;
+        line_width_dest = dest_header->w;
+        line_hight_dest = dest_header->h;
+        start_x_dest = 0;
+        start_y_dest = 0;
     }
-    else 
+    else
     {
         line_width_dest = lv_area_get_width(dest_area);
         line_hight_dest = lv_area_get_height(dest_area);
+        start_x_dest = dest_area->x1;
+        start_y_dest = dest_area->y1;
     }
 
     if(src_area == NULL) 
     {
-        line_width_src = src->header.w;
-        line_hight_src = src->header.h;
+        line_width_src = src_header->w;
+        line_hight_src = src_header->h;
+        start_x_src = 0;
+        start_y_src = 0;
     }
-    else 
+    else
     {
         line_width_src = lv_area_get_width(src_area);
         line_hight_src = lv_area_get_height(src_area);
+        start_x_src = src_area->x1;
+        start_y_src = src_area->y1;
     }
 
     /*Check source and dest area have same width and hight*/
@@ -274,24 +283,24 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
     if(des_format != COLOR_FORMAT_INVALID) {
 
         nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, des_format, -1);
-        nema_set_clip(dest_area->x1, dest_area->y1, line_width_dest, line_hight_dest);
+        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
         nema_set_blend_blit(NEMA_BL_SRC);
-        nema_blit_subrect(dest_area->x1, dest_area->y1, line_width_src, line_hight_src, src_area->x1, src_area->y1);
+        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else if(dest_header->cf == LV_COLOR_FORMAT_RGB565A8)
     {
         nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, NEMA_RGB565, -1);
-        nema_set_clip(dest_area->x1, dest_area->y1, line_width_dest, line_hight_dest);
+        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, NEMA_RGB565, -1, NEMA_FILTER_PS);
         nema_set_blend_blit(NEMA_BL_SRC);
-        nema_blit_subrect(dest_area->x1, dest_area->y1, line_width_src, line_hight_src, src_area->x1, src_area->y1);
+        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
 
         nema_bind_dst_tex((uintptr_t)dest->data + dest_header->w * dest_header->h * 2, dest_header->w, dest_header->h, NEMA_A8, -1);
-        nema_set_clip(dest_area->x1, dest_area->y1, line_width_dest, line_hight_dest);
+        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data + src_header->w * src_header->h * 2, src_header->w, src_header->h, NEMA_A8, -1, NEMA_FILTER_PS);
         nema_set_blend_blit(NEMA_BL_SRC);
-        nema_blit_subrect(dest_area->x1, dest_area->y1, line_width_src, line_hight_src, src_area->x1, src_area->y1);
+        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else if(dest_header->cf == LV_COLOR_FORMAT_I1 || dest_header->cf == LV_COLOR_FORMAT_I2 || dest_header->cf == LV_COLOR_FORMAT_I4 || dest_header->cf == LV_COLOR_FORMAT_I8)
     {
@@ -325,10 +334,10 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
         }
 
         nema_bind_dst_tex((uintptr_t)dest->data + palette_size * 4, dest_header->w, dest_header->h, des_format, -1);
-        nema_set_clip(dest_area->x1, dest_area->y1, line_width_dest, line_hight_dest);
+        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data + palette_size * 4, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
         nema_set_blend_blit(NEMA_BL_SRC);
-        nema_blit_subrect(dest_area->x1, dest_area->y1, line_width_src, line_hight_src, src_area->x1, src_area->y1);
+        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else
     {

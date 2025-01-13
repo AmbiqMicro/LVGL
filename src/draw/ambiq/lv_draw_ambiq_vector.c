@@ -188,49 +188,59 @@ static nema_tex_mode_t lv_vector_grad_spread_to_nema(lv_vector_gradient_spread_t
     }
 }
 
+static lv_image_decoder_dsc_t* ptr_decoder_dsc = NULL;
+
 static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
                                     const lv_draw_image_dsc_t * img_dsc)
 {
 
-    lv_image_decoder_dsc_t decoder_dsc;
+        ptr_decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
 
 
-        lv_result_t res = lv_image_decoder_open(&decoder_dsc, img_dsc->src, NULL);
+        lv_result_t res = lv_image_decoder_open(ptr_decoder_dsc, img_dsc->src, NULL);
         if(res != LV_RESULT_OK) 
         {
+            lv_free(ptr_decoder_dsc);
+            ptr_decoder_dsc = NULL;
             LV_LOG_ERROR("Failed to open image");
             return;
         }
         else
         { 
-            if(decoder_dsc.decoded == NULL) 
+            if(ptr_decoder_dsc->decoded == NULL) 
             {
                 /*The whole image is not available, we can't draw it with GPU*/
                 LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
-                lv_image_decoder_close(&decoder_dsc);
+                lv_image_decoder_close(ptr_decoder_dsc);
+                lv_free(ptr_decoder_dsc);
+                ptr_decoder_dsc = NULL;
                 return;
             }
             else
             {
-                nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(decoder_dsc.header.cf);
+                nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(ptr_decoder_dsc->header.cf);
                 if(nema_cf == COLOR_FORMAT_INVALID)
                 {
                     LV_LOG_WARN("GPU failed, not supported color format!");
-                    lv_image_decoder_close(&decoder_dsc);
+                    lv_image_decoder_close(ptr_decoder_dsc);
+                    lv_free(ptr_decoder_dsc);
+                    ptr_decoder_dsc = NULL;
                     return ;
                 }
 
-                if(decoder_dsc.header.cf == LV_COLOR_FORMAT_RGB565A8)
+                if(ptr_decoder_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8)
                 {
                     LV_LOG_WARN("not support RGB565A8 color format for vector graphics!");
-                    lv_image_decoder_close(&decoder_dsc);
+                    lv_image_decoder_close(ptr_decoder_dsc);
+                    lv_free(ptr_decoder_dsc);
+                    ptr_decoder_dsc = NULL;
                     return ;   
                 }
 
             }
         }
     
-    lv_image_header_t* header = &decoder_dsc.decoded->header;
+    lv_image_header_t* header = &ptr_decoder_dsc->decoded->header;
     uint32_t bg_color = lv_ambiq_color_convert(img_dsc->recolor, img_dsc->recolor_opa);
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     bool LUT_texture = false;
@@ -239,9 +249,9 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
     nema_img_obj_t* palette_obj = lv_malloc(sizeof(nema_img_obj_t));
 
     //bind image
-    img_obj->bo.base_virt = (void *)decoder_dsc.decoded->data;
-    img_obj->bo.base_phys = (uintptr_t)decoder_dsc.decoded->data;
-    img_obj->bo.size = decoder_dsc.decoded->data_size;
+    img_obj->bo.base_virt = (void *)ptr_decoder_dsc->decoded->data;
+    img_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->decoded->data;
+    img_obj->bo.size = ptr_decoder_dsc->decoded->data_size;
     img_obj->format = nema_cf;
     img_obj->w = header->w;
     img_obj->h = header->h;
@@ -272,8 +282,8 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
         }
 
         // LUT PALETTE
-        palette_obj->bo.base_virt = (void *)decoder_dsc.palette;
-        palette_obj->bo.base_phys = (uintptr_t)decoder_dsc.palette;
+        palette_obj->bo.base_virt = (void *)ptr_decoder_dsc->palette;
+        palette_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->palette;
         palette_obj->bo.size = lut_size*4;
         palette_obj->format = NEMA_BGRA8888;
         palette_obj->w = lut_size;
@@ -303,6 +313,7 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
     else
     {
         nema_vg_paint_set_tex(vg_paint, img_obj);
+        lv_free(palette_obj);
     }
     
 
@@ -573,6 +584,15 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
     if(ptr_palette_obj)
     {
         lv_free(ptr_palette_obj);
+    }
+
+    // TODO: the decoder should not be close here, it should be closed after all the drawing is done.
+    // We will find a proper location to close the decoder when our own image_decoder is ready.
+    if(ptr_decoder_dsc)
+    {
+        lv_image_decoder_close(ptr_decoder_dsc);
+        lv_free(ptr_decoder_dsc);
+        ptr_decoder_dsc = NULL;
     }
 
     lv_free(vg_path_seg);
