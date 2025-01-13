@@ -19,6 +19,7 @@
 /**********************
  *      TYPEDEFS
  **********************/
+static lv_img_dsc_t img_demo_vector_avatar_ssram;
 
 /**********************
  *  STATIC PROTOTYPES
@@ -37,9 +38,8 @@ static void draw_pattern(lv_vector_dsc_t * ctx, lv_vector_path_t * path)
     lv_draw_image_dsc_t img_dsc;
     lv_draw_image_dsc_init(&img_dsc);
 
-    LV_IMAGE_DECLARE(img_demo_vector_avatar);
-    img_dsc.header = img_demo_vector_avatar.header;
-    img_dsc.src = &img_demo_vector_avatar;
+    img_dsc.header = img_demo_vector_avatar_ssram.header;
+    img_dsc.src = &img_demo_vector_avatar_ssram;
 
     lv_vector_dsc_set_fill_image(ctx, &img_dsc);
     lv_vector_dsc_translate(ctx, 250, 250);
@@ -58,7 +58,15 @@ static void draw_gradient(lv_vector_dsc_t * ctx, lv_vector_path_t * path)
     lv_vector_path_quad_to(path, &pts[1], &pts[2]);
     lv_vector_path_close(path);
 
-    lv_grad_stop_t stops[2];
+
+    // lv_fpoint_t pts[] = {{200, 200}, {400, 200}, {400, 400}, {200, 400}};
+    // lv_vector_path_move_to(path, &pts[0]);
+    // lv_vector_path_line_to(path, &pts[1]);
+    // lv_vector_path_line_to(path, &pts[2]);
+    // lv_vector_path_line_to(path, &pts[3]);
+    // lv_vector_path_close(path);
+
+    lv_gradient_stop_t stops[2];
     lv_memzero(stops, sizeof(stops));
     stops[0].color = lv_color_hex(0xff0000);
     stops[0].opa = LV_OPA_COVER;
@@ -266,11 +274,31 @@ static void event_cb(lv_event_t * e)
 
 void lv_demo_vector_graphic_not_buffered(void)
 {
+
+    LV_IMAGE_DECLARE(img_demo_vector_avatar);
+
+    lv_draw_buf_t* img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w, 
+    img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
+    memcpy(img_demo_vector_avatar_ssram_buf->data, img_demo_vector_avatar.data, img_demo_vector_avatar.data_size);
+    lv_draw_buf_flush_cache(img_demo_vector_avatar_ssram_buf, NULL);
+
+    lv_draw_buf_to_image(img_demo_vector_avatar_ssram_buf, &img_demo_vector_avatar_ssram);
+
     lv_obj_add_event_cb(lv_screen_active(), event_cb, LV_EVENT_DRAW_MAIN, NULL);
 }
 
 void lv_demo_vector_graphic_buffered(void)
 {
+
+    LV_IMAGE_DECLARE(img_demo_vector_avatar);
+
+    lv_draw_buf_t* img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w, 
+    img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
+    memcpy(img_demo_vector_avatar_ssram_buf->data, img_demo_vector_avatar.data, img_demo_vector_avatar.data_size);
+    lv_draw_buf_flush_cache(img_demo_vector_avatar_ssram_buf, NULL);
+
+    lv_draw_buf_to_image(img_demo_vector_avatar_ssram_buf, &img_demo_vector_avatar_ssram);
+
     lv_draw_buf_t * draw_buf = lv_draw_buf_create(WIDTH, HEIGHT, LV_COLOR_FORMAT_ARGB8888, LV_STRIDE_AUTO);
     lv_draw_buf_clear(draw_buf, NULL);
 
