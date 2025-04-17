@@ -17,6 +17,7 @@
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
 #include "../../stdlib/lv_string.h"
+#include "lv_draw_ambiq_private.h"
 
 /*********************
  *      DEFINES
@@ -53,7 +54,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_blur_corner(int32_t size, int32_t sw, u
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shadow_dsc_t * dsc, const lv_area_t * coords)
+void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t * dsc, const lv_area_t * coords)
 {
     /*Calculate the rectangle which is blurred to get the shadow in `shadow_area`*/
     lv_area_t core_area;
@@ -73,16 +74,18 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     if(opa > LV_OPA_MAX) opa = LV_OPA_COVER;
 
     /* Get layer buffer area */
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_layer_t * layer = t->target_layer;
     int32_t layer_buf_start_x = layer->buf_area.x1;
     int32_t layer_buf_start_y = layer->buf_area.y1;
     int32_t layer_buf_width = lv_area_get_width(&layer->buf_area);
     int32_t layer_buf_height = lv_area_get_height(&layer->buf_area);
 
+    lv_draw_ambiq_unit_t* unit = (lv_draw_ambiq_unit_t*)t->draw_unit;
+
     /*Get clipped draw area which is the real draw area.
      *It is always the same or inside `shadow_area`*/
     lv_area_t draw_area;
-    if(!lv_area_intersect(&draw_area, &shadow_area, draw_unit->clip_area)) return;
+    if(!lv_area_intersect(&draw_area, &shadow_area, &t->clip_area)) return;
 
     /*Consider 1 px smaller bg to be sure the edge will be covered by the shadow*/
     lv_area_t bg_area;
@@ -106,6 +109,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
 
 
     sh_buf = lv_malloc(corner_size * corner_size * sizeof(uint16_t));
+    LV_ASSERT_MALLOC(sh_buf);
     shadow_draw_corner_buf(&core_area, (uint16_t *)sh_buf, dsc->width, r_sh);
 
     /*Skip a lot of masking if the background will cover the shadow that would be masked out*/
@@ -142,7 +146,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_buf, corner_size, corner_size, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /* set the blend mode to SRC*/
-    nema_set_blend(NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
 
     nema_set_clip_temp(0 , 0 , layer_buf_width, layer_buf_height);
 
@@ -157,7 +161,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     lv_area_copy(&raster_area, &blend_area);
     raster_area.x1 = LV_MAX(blend_area.x1, w_half);
     raster_area.y2 = LV_MIN(blend_area.y2, h_half);
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
 
         /* Blit the blurred corner to the stencil buffer*/
@@ -184,7 +188,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.x1 = LV_MAX(blend_area.x1, w_half);
     raster_area.y1 = LV_MAX(blend_area.y1, h_half + 1);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
     
         /* Blit the blurred corner to the stencil buffer*/
@@ -213,7 +217,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.y1 = LV_MAX(blend_area.y1, h_half + 1);
     raster_area.x2 = LV_MIN(blend_area.x2, w_half - 1);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
         /* Blit the blurred corner to the stencil buffer*/
     
@@ -241,7 +245,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.x2 = LV_MIN(blend_area.x2, w_half - 1);
     raster_area.y2 = LV_MIN(blend_area.y2, h_half);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
         /* set the translate matrix*/
         nema_mat3x3_load_identity(m);
@@ -267,7 +271,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     lv_area_copy(&raster_area, &blend_area);
     raster_area.y2 = LV_MIN(blend_area.y2, h_half);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
 
         /* Blit the blurred corner to the stencil buffer*/
@@ -293,7 +297,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     lv_area_copy(&raster_area, &blend_area);
     raster_area.y1 = LV_MAX(blend_area.y1, h_half + 1);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
 
         /* Blit the blurred corner to the stencil buffer*/
@@ -324,7 +328,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.y2 = LV_MAX(blend_area.y2, h_half);
     raster_area.x1 = LV_MAX(blend_area.x1, w_half);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
 
         /* Blit the blurred corner to the stencil buffer*/
@@ -351,7 +355,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.y2 = LV_MAX(blend_area.y2, h_half);
     raster_area.x2 = LV_MIN(blend_area.x2, w_half - 1);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
 
             /* Blit the blurred corner to the stencil buffer*/
@@ -371,7 +375,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     }
 
     /* set the blend mode to SRC*/
-    nema_set_blend(NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
     nema_set_raster_color(0xff000000);
 
     /*Draw the center rectangle.*/
@@ -385,7 +389,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
     raster_area.y2 = LV_MAX(blend_area.y2, h_half);
 
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area) &&
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area) &&
        !lv_area_is_in(&clip_raster_area, &bg_area, r_bg)) {
             nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y, 
                             clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
@@ -417,9 +421,9 @@ void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shad
 
     uint32_t shadow_color = lv_ambiq_color_convert(dsc->color, dsc->opa);
     if ( dsc->opa == 0xFF) {
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+        lv_ambiq_set_blend_blit(unit, blending_mode);
     } else {
-        nema_set_blend(blending_mode|NEMA_BLOP_MODULATE_A, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+        lv_ambiq_set_blend_blit(unit, blending_mode|NEMA_BLOP_MODULATE_A);
         nema_set_const_color(shadow_color);
     }
     nema_set_tex_color(shadow_color);
@@ -474,6 +478,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
 
     int32_t y;
     lv_opa_t * mask_line = lv_malloc(size);
+    LV_ASSERT_MALLOC(mask_line);
     uint16_t * sh_ups_tmp_buf = (uint16_t *)sh_buf;
     for(y = 0; y < size; y++) {
         lv_memset(mask_line, 0xff, size);
@@ -544,6 +549,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_blur_corner(int32_t size, int32_t sw, u
 
     /*Horizontal blur*/
     uint16_t * sh_ups_blur_buf = lv_malloc(size * sizeof(uint16_t));
+    LV_ASSERT_MALLOC(sh_ups_blur_buf);
 
     int32_t x;
     int32_t y;

@@ -15,6 +15,7 @@
 
 #if LV_USE_DRAW_AMBIQ
 #include "lv_draw_ambiq.h"
+#include "lv_draw_ambiq_private.h"
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
 
@@ -153,17 +154,22 @@ static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t
 
         nema_bind_dst_tex((uintptr_t)draw_buf->data, header->w, header->h, des_format, header->stride);
         nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        nema_clear(0x0);
+        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
+        nema_set_raster_color(0x0);
+        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
+
     }
     else if(header->cf == LV_COLOR_FORMAT_RGB565A8)
     {
-        nema_bind_dst_tex((uintptr_t)draw_buf->data, header->w, header->h, NEMA_RGB565, -1);
         nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        nema_clear(0x0);
+        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
+        nema_set_raster_color(0x0);
+
+        nema_bind_dst_tex((uintptr_t)draw_buf->data, header->w, header->h, NEMA_RGB565, -1);
+        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
 
         nema_bind_dst_tex((uintptr_t)draw_buf->data + header->w * header->h * 2, header->w, header->h, NEMA_A8, -1);
-        nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        nema_clear(0x0);      
+        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
     }
     else if(header->cf == LV_COLOR_FORMAT_I1 || header->cf == LV_COLOR_FORMAT_I2 || header->cf == LV_COLOR_FORMAT_I4 || header->cf == LV_COLOR_FORMAT_I8)
     {
@@ -191,12 +197,16 @@ static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t
         {
             nema_bind_dst_tex((uintptr_t)draw_buf->data, palette_size, 1, NEMA_RGBA8888, -1);
             nema_set_clip(0, 0, palette_size, 1);
-            nema_clear(0x0);
+            lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
+            nema_set_raster_color(0x0);
+            nema_raster_rect(0, 0, palette_size, 1);
         }
 
         nema_bind_dst_tex((uintptr_t)draw_buf->data + palette_size * 4, header->w, header->h, des_format, -1);
         nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        nema_clear(0x0);
+        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
+        nema_set_raster_color(0x0);
+        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
     }
     else
     {
@@ -285,7 +295,7 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
         nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, des_format, -1);
         nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
-        nema_set_blend_blit(NEMA_BL_SRC);
+        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
         nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else if(dest_header->cf == LV_COLOR_FORMAT_RGB565A8)
@@ -293,13 +303,13 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
         nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, NEMA_RGB565, -1);
         nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, NEMA_RGB565, -1, NEMA_FILTER_PS);
-        nema_set_blend_blit(NEMA_BL_SRC);
+        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
         nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
 
         nema_bind_dst_tex((uintptr_t)dest->data + dest_header->w * dest_header->h * 2, dest_header->w, dest_header->h, NEMA_A8, -1);
         nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data + src_header->w * src_header->h * 2, src_header->w, src_header->h, NEMA_A8, -1, NEMA_FILTER_PS);
-        nema_set_blend_blit(NEMA_BL_SRC);
+        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
         nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else if(dest_header->cf == LV_COLOR_FORMAT_I1 || dest_header->cf == LV_COLOR_FORMAT_I2 || dest_header->cf == LV_COLOR_FORMAT_I4 || dest_header->cf == LV_COLOR_FORMAT_I8)
@@ -329,14 +339,14 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
             nema_bind_dst_tex((uintptr_t)dest->data, palette_size, 1, NEMA_RGBA8888, -1);
             nema_set_clip(0, 0, palette_size, 1);
             nema_bind_src_tex((uintptr_t)src->data, palette_size, 1, NEMA_RGBA8888, -1, NEMA_FILTER_PS);
-            nema_set_blend_blit(NEMA_BL_SRC);
+            lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
             nema_blit(0, 0);
         }
 
         nema_bind_dst_tex((uintptr_t)dest->data + palette_size * 4, dest_header->w, dest_header->h, des_format, -1);
         nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
         nema_bind_src_tex((uintptr_t)src->data + palette_size * 4, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
-        nema_set_blend_blit(NEMA_BL_SRC);
+        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
         nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
     else

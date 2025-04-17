@@ -16,6 +16,7 @@
 #include "../../stdlib/lv_mem.h"
 #include "../../stdlib/lv_string.h"
 #include "lv_draw_ambiq.h"
+#include "lv_draw_ambiq_private.h"
 
 /*********************
  *      DEFINES
@@ -41,46 +42,48 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect_dsc_t * dsc, const lv_area_t * coords)
+void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t * dsc, const lv_area_t * coords)
 {
     LV_UNUSED(coords);
 
     lv_area_t draw_area;
-    if(!lv_area_intersect(&draw_area, &dsc->area, draw_unit->clip_area)) {
+    if(!lv_area_intersect(&draw_area, &dsc->area, &t->clip_area)) {
         return;
     }
 
-    lv_layer_t * target_layer = draw_unit->target_layer;
+    lv_layer_t * target_layer = t->target_layer;
     lv_area_t * buf_area = &target_layer->buf_area;
     lv_area_t clear_area;
+    lv_draw_ambiq_unit_t* unit = (lv_draw_ambiq_unit_t*)t->draw_unit;
 
-    //void * draw_buf = target_layer->draw_buf;
+    if(!dsc->keep_outside)
+    {
+        /* set the blend mode to SRC*/
+        lv_ambiq_set_blend_fill(unit, NEMA_BL_SRC);
+        nema_set_raster_color(0x00000000);
 
-    /* set the blend mode to SRC*/
-    nema_set_blend(NEMA_BL_SRC, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
-    nema_set_raster_color(0x00000000);
-
-    /*Clear the top part*/
-    lv_area_set(&clear_area, draw_unit->clip_area->x1, draw_unit->clip_area->y1, draw_unit->clip_area->x2,
+        /*Clear the top part*/
+        lv_area_set(&clear_area, t->clip_area.x1, t->clip_area.y1, t->clip_area.x2,
                 dsc->area.y1 - 1);
-    lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
-    nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
+        lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
+        nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
 
-    /*Clear the bottom part*/
-    lv_area_set(&clear_area, draw_unit->clip_area->x1, dsc->area.y2 + 1, draw_unit->clip_area->x2,
-                draw_unit->clip_area->y2);
-    lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
-    nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
+        /*Clear the bottom part*/
+        lv_area_set(&clear_area, t->clip_area.x1, dsc->area.y2 + 1, t->clip_area.x2,
+                t->clip_area.y2);
+        lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
+        nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
 
-    /*Clear the left part*/
-    lv_area_set(&clear_area, draw_unit->clip_area->x1, dsc->area.y1, dsc->area.x1 - 1, dsc->area.y2);
-    lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
-    nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
+        /*Clear the left part*/
+        lv_area_set(&clear_area, t->clip_area.x1, dsc->area.y1, dsc->area.x1 - 1, dsc->area.y2);
+        lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
+        nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
 
-    /*Clear the right part*/
-    lv_area_set(&clear_area, dsc->area.x2 + 1, dsc->area.y1, draw_unit->clip_area->x2, dsc->area.y2);
-    lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
-    nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
+        /*Clear the right part*/
+        lv_area_set(&clear_area, dsc->area.x2 + 1, dsc->area.y1, t->clip_area.x2, dsc->area.y2);
+        lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
+        nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
+    }
 
     /*Get the clamped radius*/
     int32_t radius = dsc->radius;
@@ -104,7 +107,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     nema_bind_tex(NEMA_TEX1, (uintptr_t)mask_buffer->data, radius, radius, NEMA_L8, -1, NEMA_FILTER_PS);
 
     /* set the blend mode to SRC*/
-    nema_set_blend(NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(unit,  NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
     nema_set_clip_temp(0 , 0 , radius, radius);
 
     /* draw the mask to this buffer*/
@@ -116,7 +119,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     nema_set_clip_pop();
 
     nema_bind_tex(NEMA_TEX1, (uintptr_t)mask_buffer->data, radius, radius, NEMA_A8, -1, NEMA_FILTER_PS);
-    nema_set_blend(NEMA_BL_DST_IN, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(unit, NEMA_BL_DST_IN, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
     nema_set_tex_color(0xffffffff);
 
     lv_area_t blend_area;
@@ -132,7 +135,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     blend_area.y2 = dsc->area.y1 + radius - 1;
     lv_area_copy(&raster_area, &blend_area);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area)) {
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
 
         /* Blit the blurred corner to the stencil buffer*/
 
@@ -155,7 +158,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     blend_area.y2 = dsc->area.y2;
     lv_area_copy(&raster_area, &blend_area);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area)) {
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
     
         /* Blit the blurred corner to the stencil buffer*/
     
@@ -179,7 +182,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     blend_area.y2 = dsc->area.y2;
     lv_area_copy(&raster_area, &blend_area);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area)) {
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
         /* Blit the blurred corner to the stencil buffer*/
     
         /* set the translate matrix*/
@@ -203,7 +206,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect
     blend_area.y2 = dsc->area.y1 + radius - 1;
     lv_area_copy(&raster_area, &blend_area);
 
-    if(lv_area_intersect(&clip_raster_area, &raster_area, draw_unit->clip_area)) {
+    if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
         /* set the translate matrix*/
         nema_mat3x3_load_identity(m);
         m[0][0] = -1;

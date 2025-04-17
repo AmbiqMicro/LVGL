@@ -17,6 +17,8 @@
 #error "LV_USE_VECTOR_GRAPHIC requires LV_USE_DRAW_AMBIQ_VG 1"
 #endif
 
+#include "lv_draw_ambiq_private.h"
+
 #include <math.h>
 
 
@@ -53,7 +55,7 @@ static float aabb_max_y = 0;
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_vector(lv_draw_unit_t * draw_unit, const lv_draw_vector_task_dsc_t * dsc)
+void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * dsc)
 {
     if(dsc->task_list == NULL)
         return;
@@ -78,9 +80,11 @@ void lv_draw_ambiq_vector(lv_draw_unit_t * draw_unit, const lv_draw_vector_task_
 
     /*handle each path*/
 
-    LV_PROFILER_BEGIN;
-    lv_vector_for_each_destroy_tasks(dsc->task_list, task_draw_cb, draw_unit);
-    LV_PROFILER_END;
+
+
+    LV_PROFILER_DRAW_BEGIN;
+    lv_vector_for_each_destroy_tasks(dsc->task_list, task_draw_cb, t);
+    LV_PROFILER_DRAW_END;
 }
 
 
@@ -240,7 +244,7 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
             }
         }
     
-    lv_image_header_t* header = &ptr_decoder_dsc->decoded->header;
+    const lv_image_header_t* header = &ptr_decoder_dsc->decoded->header;
     uint32_t bg_color = lv_ambiq_color_convert(img_dsc->recolor, img_dsc->recolor_opa);
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     bool LUT_texture = false;
@@ -355,7 +359,7 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
             // lv_matrix_transform_point(&dsc->matrix, &p1);
             //lv_matrix_transform_point(&dsc->matrix, &p2);
             //nema_mat3x3_invert(dsc->matrix.m);
-            nema_mat3x3_mul_vec(&dsc->matrix, &p2.x, &p2.y);
+            nema_mat3x3_mul_vec(dsc->matrix.m, &p2.x, &p2.y);
 
             p2.x += dsc->gradient.x1;
             p2.y += dsc->gradient.y1;            
@@ -394,8 +398,14 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_TEXTURE);
 
         lv_vector_image_to_nema(vg_paint, &dsc->img_dsc);
-        nema_vg_paint_lock_tran_to_path(vg_paint, 1);
-        lv_matrix_translate(&(dsc->matrix), aabb_min_x, aabb_min_y);
+        if(dsc->fill_units == LV_VECTOR_FILL_UNITS_OBJECT_BOUNDING_BOX) {
+
+            nema_vg_paint_lock_tran_to_path(vg_paint, 1);
+            lv_matrix_translate(dsc->matrix.m, aabb_min_x, aabb_min_y);
+        }
+        else {
+            nema_vg_paint_lock_tran_to_path(vg_paint, 0);
+        }
         nema_vg_paint_set_tex_matrix(vg_paint, dsc->matrix.m);
 
     }
@@ -502,11 +512,12 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
 
 static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_draw_dsc_t * dsc)
 {
-    LV_PROFILER_BEGIN;
-    lv_draw_ambiq_unit_t *unit = (lv_draw_ambiq_unit_t *)ctx;
+    LV_PROFILER_DRAW_BEGIN;
+    lv_draw_task_t *t = (lv_draw_task_t *)ctx;
 
     /*set clip*/
-    lv_layer_t * layer = unit->base_unit.target_layer;
+    lv_layer_t * layer = t->target_layer;
+    lv_draw_ambiq_unit_t * unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
     int32_t layer_start_x = layer->buf_area.x1;
     int32_t layer_start_y = layer->buf_area.y1;   
 
@@ -522,8 +533,12 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
         /* clear color needs to ignore fill_dsc.opa */
 
         uint32_t clear_color = nema_rgba(dsc->fill_dsc.color.red, dsc->fill_dsc.color.green, dsc->fill_dsc.color.blue, LV_OPA_COVER);
-        nema_clear(clear_color);
-        LV_PROFILER_END;
+        lv_ambiq_set_blend_fill(unit, NEMA_BL_SRC);
+        nema_set_raster_color(clear_color);
+        nema_raster_rect(scissor_area.x1, scissor_area.y1, 
+                            lv_area_get_width(&scissor_area), 
+                            lv_area_get_height(&scissor_area));
+        LV_PROFILER_DRAW_END;
         return;
     }
 
@@ -534,6 +549,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
         blend = NEMA_BL_SIMPLE;
     }
     nema_vg_set_blend(blend);
+    lv_ambiq_clear_blend_mode(unit);
 
 
     /* set path quality */
@@ -597,7 +613,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
 
     lv_free(vg_path_seg);
 
-    LV_PROFILER_END;
+    LV_PROFILER_DRAW_END;
 }
 
 #endif /*LV_USE_DRAW_AMBIQ && LV_USE_VECTOR_GRAPHIC*/

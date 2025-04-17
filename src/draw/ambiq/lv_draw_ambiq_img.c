@@ -13,6 +13,7 @@
 
 #if LV_USE_DRAW_AMBIQ
 #include "lv_draw_ambiq.h"
+#include "lv_draw_ambiq_private.h"
 #include "../../misc/lv_log.h"
 #include "../../core/lv_refr_private.h"
 #include "../../stdlib/lv_mem.h"
@@ -20,7 +21,6 @@
 #include "../../misc/lv_color.h"
 #include "../../stdlib/lv_string.h"
 #include "../../core/lv_global.h"
-#include "lv_draw_ambiq_color.h"
 
 /*********************
  *      DEFINES
@@ -33,7 +33,7 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
+static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
                                     const lv_draw_image_dsc_t * draw_dsc,
                                     lv_image_decoder_dsc_t * decoder_dsc,
                                     const lv_area_t * coords, 
@@ -52,7 +52,7 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_layer(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t * draw_dsc, const lv_area_t * coords)
+void lv_draw_ambiq_layer(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc, const lv_area_t * coords)
 {
     lv_layer_t * layer_to_draw = (lv_layer_t *)draw_dsc->src;
 
@@ -62,10 +62,10 @@ void lv_draw_ambiq_layer(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
 
     lv_draw_image_dsc_t new_draw_dsc = *draw_dsc;
     new_draw_dsc.src = layer_to_draw->draw_buf;
-    lv_draw_ambiq_image(draw_unit, &new_draw_dsc, coords);
+    lv_draw_ambiq_image(t, &new_draw_dsc, coords);
 }
 
-void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t * draw_dsc,
+void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc,
                       const lv_area_t * coords)
 {
     lv_image_decoder_dsc_t decoder_dsc;
@@ -172,14 +172,14 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
         }
 
         lv_area_t clipped_img_area;
-        if(!lv_area_intersect(&clipped_img_area, &draw_area, draw_unit->clip_area)) {
+        if(!lv_area_intersect(&clipped_img_area, &draw_area, &t->clip_area)) {
             lv_image_decoder_close(&decoder_dsc);
             return;
         }
 
         // TODO: compare the draw_area min and max value with coordinate range limitation.
 
-        lv_draw_ambiq_image_core(draw_unit, draw_dsc, &decoder_dsc, 
+        lv_draw_ambiq_image_core(t, draw_dsc, &decoder_dsc, 
                                  coords, mask_img);
         
         nema_cmdlist_t * current_cl = nema_cl_get_bound();
@@ -197,7 +197,7 @@ void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t *
  *   STATIC FUNCTIONS
  **********************/
 
-static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
+static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
                                     const lv_draw_image_dsc_t * draw_dsc,
                                     lv_image_decoder_dsc_t * decoder_dsc,
                                     const lv_area_t * coords, 
@@ -221,7 +221,7 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
         return;  
     }
 
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_layer_t * layer = t->target_layer;
 
     uint32_t recolor_rgba =lv_ambiq_color_convert(draw_dsc->recolor, draw_dsc->recolor_opa);
 
@@ -390,7 +390,7 @@ static void lv_draw_ambiq_image_core(lv_draw_unit_t * draw_unit,
                 NEMA_FILTER_BL|tex_wrap_mode);
     
 
-    nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+    lv_ambiq_set_blend_blit((lv_draw_ambiq_unit_t*)t->draw_unit, blending_mode);
 
     bool transformed = draw_dsc->rotation != 0 || draw_dsc->scale_x != LV_SCALE_NONE ||
                        draw_dsc->scale_y != LV_SCALE_NONE || draw_dsc->skew_y != 0 || draw_dsc->skew_x != 0 ? true : false;
