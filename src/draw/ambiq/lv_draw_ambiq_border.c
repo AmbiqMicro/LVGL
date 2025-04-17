@@ -10,6 +10,7 @@
 #if LV_USE_DRAW_AMBIQ
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
+#include "lv_draw_ambiq_private.h"
 
 /*********************
  *      DEFINES
@@ -35,14 +36,14 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t * dsc, const lv_area_t * coords)
+void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, const lv_area_t * coords)
 {
     if(dsc->opa <= LV_OPA_MIN) return;
     if(dsc->width == 0) return;
     if(dsc->side == LV_BORDER_SIDE_NONE) return;
 
     lv_area_t draw_area;
-    if(!lv_area_intersect(&draw_area, coords, draw_unit->clip_area)) return;
+    if(!lv_area_intersect(&draw_area, coords, &t->clip_area)) return;
 
     int32_t coords_w = lv_area_get_width(coords);
     int32_t coords_h = lv_area_get_height(coords);
@@ -60,7 +61,7 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
 
     uint32_t blending_mode;
 
-    if(draw_unit->target_layer->color_format == LV_COLOR_FORMAT_ARGB8888)
+    if(t->target_layer->color_format == LV_COLOR_FORMAT_ARGB8888)
     {
         blending_mode = NEMA_BL_SRC_OVER|NEMA_BLOP_SRC_PREMULT;
     }
@@ -72,11 +73,11 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
 
 
-    nema_set_blend(blending_mode, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
+    lv_ambiq_set_blend_fill((lv_draw_ambiq_unit_t*)t->draw_unit, blending_mode);
     nema_set_raster_color(bg_color);
 
-    int draw_buf_offset_x = draw_unit->target_layer->buf_area.x1;
-    int draw_buf_offset_y = draw_unit->target_layer->buf_area.y1;    
+    int draw_buf_offset_x = t->target_layer->buf_area.x1;
+    int draw_buf_offset_y = t->target_layer->buf_area.y1;    
 
     int x1;
     int y1;
@@ -232,7 +233,7 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
                 clip.y2 = clip.y1 + LV_MIN(border_width, rout) - 1;
             }
 
-            lv_area_intersect(&clip_intersect, &clip, draw_unit->clip_area);
+            lv_area_intersect(&clip_intersect, &clip, &t->clip_area);
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
@@ -266,7 +267,7 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
                 clip.y1 = clip.y2 - LV_MIN(border_width, rout) + 1;
             }
 
-            lv_area_intersect(&clip_intersect, &clip, draw_unit->clip_area);
+            lv_area_intersect(&clip_intersect, &clip, &t->clip_area);
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
@@ -300,7 +301,7 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
                 clip.y1 = clip.y2 - LV_MIN(border_width, rout) + 1;
             }
 
-            lv_area_intersect(&clip_intersect, &clip, draw_unit->clip_area);
+            lv_area_intersect(&clip_intersect, &clip, &t->clip_area);
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
@@ -334,7 +335,7 @@ void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t
                 clip.y2 = clip.y1 - LV_MIN(border_width, rout) + 1;
             }
 
-            lv_area_intersect(&clip_intersect, &clip, draw_unit->clip_area);
+            lv_area_intersect(&clip_intersect, &clip, &t->clip_area);
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 

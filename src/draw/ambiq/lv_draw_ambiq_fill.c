@@ -8,6 +8,7 @@
  *********************/
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
+#include "lv_draw_ambiq_private.h"
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
 
@@ -35,12 +36,12 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_fill(lv_draw_unit_t * draw_unit, const lv_draw_fill_dsc_t * dsc, const lv_area_t * coords)
+void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, const lv_area_t * coords)
 {
     if(dsc->opa <= LV_OPA_MIN) return;
 
-    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)draw_unit;
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
+    lv_layer_t * layer = t->target_layer;
     lv_grad_dir_t grad_dir = dsc->grad.dir;
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
 
@@ -66,7 +67,7 @@ void lv_draw_ambiq_fill(lv_draw_unit_t * draw_unit, const lv_draw_fill_dsc_t * d
     }
 
     if((grad_dir == LV_GRAD_DIR_NONE)) {
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
+        lv_ambiq_set_blend_fill(draw_ambiq_unit, blending_mode);
         nema_set_raster_color(bg_color);
         if(rout == 0)
         {
@@ -104,7 +105,7 @@ void lv_draw_ambiq_fill(lv_draw_unit_t * draw_unit, const lv_draw_fill_dsc_t * d
     lv_ambiq_gradient_create(stops_count, stops, colors, &draw_ambiq_unit->small_texture_buffer);
     uint32_t small_texture_size_pixel = (draw_ambiq_unit->small_texture_buffer.size)/4;
 
-    nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
 
     nema_matrix3x3_t m;
     float rotate_angle = (grad_dir == LV_GRAD_DIR_HOR) ? 0.f : 90.f;
