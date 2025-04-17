@@ -8,6 +8,7 @@
  *********************/
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
+#include "lv_draw_ambiq_private.h"
 
 /*********************
  *      DEFINES
@@ -33,7 +34,7 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_triangle(lv_draw_unit_t * draw_unit, const lv_draw_triangle_dsc_t * dsc)
+void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * dsc)
 {
 
     lv_area_t tri_area;
@@ -44,15 +45,15 @@ void lv_draw_ambiq_triangle(lv_draw_unit_t * draw_unit, const lv_draw_triangle_d
 
     bool is_common;
     lv_area_t draw_area;
-    is_common = lv_area_intersect(&draw_area, &tri_area, draw_unit->clip_area);
+    is_common = lv_area_intersect(&draw_area, &tri_area, &t->clip_area);
     if(!is_common) return;
 
-    if(dsc->bg_opa <= LV_OPA_MIN) return;
+    if(dsc->opa <= LV_OPA_MIN) return;
 
-    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)draw_unit;
-    lv_layer_t * layer = draw_unit->target_layer;
-    lv_grad_dir_t grad_dir = dsc->bg_grad.dir;
-    uint32_t bg_color    = lv_ambiq_color_convert(dsc->bg_color, dsc->bg_opa);
+    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
+    lv_layer_t * layer = t->target_layer;
+    lv_grad_dir_t grad_dir = dsc->grad.dir;
+    uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
 
     float p0_x = (float)(dsc->p[0].x - layer->buf_area.x1);
     float p0_y = (float)(dsc->p[0].y - layer->buf_area.y1);
@@ -74,13 +75,13 @@ void lv_draw_ambiq_triangle(lv_draw_unit_t * draw_unit, const lv_draw_triangle_d
     }
 
     if((grad_dir == LV_GRAD_DIR_NONE)) {
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
+        lv_ambiq_set_blend_fill(draw_ambiq_unit, blending_mode);
         nema_set_raster_color(bg_color);
         nema_raster_triangle_f(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y);
         return;
     }
 
-    int stops_count = dsc->bg_grad.stops_count;
+    int stops_count = dsc->grad.stops_count;
 
     if(stops_count > LV_GRADIENT_MAX_STOPS)
     {
@@ -95,16 +96,16 @@ void lv_draw_ambiq_triangle(lv_draw_unit_t * draw_unit, const lv_draw_triangle_d
 
     for(uint32_t i=0; i<stops_count; i++)
     {
-        stops[i] = (float)dsc->bg_grad.stops[i].frac / 255.f;
-        colors[i].r = (float)dsc->bg_grad.stops[i].color.red;
-        colors[i].g = (float)dsc->bg_grad.stops[i].color.green;
-        colors[i].b = (float)dsc->bg_grad.stops[i].color.blue;   
-        colors[i].a = (float)dsc->bg_grad.stops[i].opa * (float)dsc->bg_opa / 255.f;               
+        stops[i] = (float)dsc->grad.stops[i].frac / 255.f;
+        colors[i].r = (float)dsc->grad.stops[i].color.red;
+        colors[i].g = (float)dsc->grad.stops[i].color.green;
+        colors[i].b = (float)dsc->grad.stops[i].color.blue;   
+        colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;               
     }
 
     lv_ambiq_gradient_create(stops_count, stops, colors, &draw_ambiq_unit->small_texture_buffer);
 
-    nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
 
     int32_t start_x = tri_area.x1 - layer->buf_area.x1;
     int32_t start_y = tri_area.y1 - layer->buf_area.y1;

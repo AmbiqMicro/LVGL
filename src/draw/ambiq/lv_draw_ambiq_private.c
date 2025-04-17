@@ -6,9 +6,11 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "lv_draw_ambiq_color.h"
+#include "lv_draw_ambiq.h"
 
 #if LV_USE_DRAW_AMBIQ
+
+#include "lv_draw_ambiq_private.h"
 
 #include "nema_graphics.h"
 
@@ -101,4 +103,47 @@ uint32_t lv_ambiq_color_convert(lv_color_t color, lv_opa_t opa)
 {
     return nema_rgba(color.red, color.green, color.blue, opa);
 }
+
+
+
+void lv_ambiq_change_blend_mode(lv_draw_ambiq_unit_t * unit, uint32_t blending_mode, 
+                                nema_tex_t dst_tex, nema_tex_t fg_tex, nema_tex_t bg_tex, bool force)
+{
+    if(unit == NULL) 
+        unit = lv_draw_ambiq_get_default_unit();
+        
+    if( (force == false) &&
+        (blending_mode == unit->blend_mode) && (dst_tex == unit->dst_tex) && 
+        (fg_tex == unit->fg_tex) && (bg_tex == unit->bg_tex))
+    {
+        return;
+    }
+    nema_set_blend(blending_mode, dst_tex, fg_tex, bg_tex);
+    unit->blend_mode = blending_mode;
+    unit->dst_tex = dst_tex;
+    unit->fg_tex = fg_tex;
+    unit->bg_tex = bg_tex;
+}
+
+void lv_ambiq_set_blend_fill(lv_draw_ambiq_unit_t * unit, uint32_t blending_mode)
+{
+    lv_ambiq_change_blend_mode(unit, blending_mode, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX, false);
+}
+
+void lv_ambiq_set_blend_blit(lv_draw_ambiq_unit_t * unit, uint32_t blending_mode)
+{
+    lv_ambiq_change_blend_mode(unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
+}
+
+void lv_ambiq_clear_blend_mode(lv_draw_ambiq_unit_t * unit)
+{
+    if(unit == NULL) 
+        unit = lv_draw_ambiq_get_default_unit();
+
+    unit->blend_mode = 0;
+    unit->dst_tex = NEMA_NOTEX;
+    unit->fg_tex = NEMA_NOTEX;
+    unit->bg_tex = NEMA_NOTEX;
+}
+
 #endif

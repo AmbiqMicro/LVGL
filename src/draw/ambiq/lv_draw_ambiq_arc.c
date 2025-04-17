@@ -11,6 +11,7 @@
 #if LV_USE_DRAW_AMBIQ
 #include "../../core/lv_refr.h"
 #include "../../misc/lv_assert.h"
+#include "lv_draw_ambiq_private.h"
 #include <math.h>
 
 /*********************
@@ -129,7 +130,7 @@ uint32_t bind_background_image(const lv_draw_arc_dsc_t * dsc, lv_image_decoder_d
 }
 
 
-void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc, const lv_area_t * coords)
+void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const lv_area_t * coords)
 {
     if(dsc->opa <= LV_OPA_MIN) return;
     if(dsc->width == 0) return;
@@ -140,7 +141,7 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
 
     lv_area_t area_out = *coords;
     lv_area_t clipped_area;
-    if(!lv_area_intersect(&clipped_area, &area_out, draw_unit->clip_area)) return;
+    if(!lv_area_intersect(&clipped_area, &area_out, &t->clip_area)) return;
 
     float start_angle = dsc->start_angle;
     float end_angle = dsc->end_angle;
@@ -163,7 +164,7 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
         end_angle += 360.f;
     }
 
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_layer_t * layer = t->target_layer;
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
 
     uint32_t blending_mode;
@@ -220,7 +221,7 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
         blending_mode = bind_background_image(dsc, &decoder_dsc, blending_mode);
 
         //Set Blending Mode
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+        lv_ambiq_set_blend_blit((lv_draw_ambiq_unit_t*)t->draw_unit, blending_mode);
 
         /*Center align*/
         lv_area_t area;
@@ -235,7 +236,7 @@ void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc
     else
     {
         //Set Blending Mode
-        nema_set_blend_fill(blending_mode);
+        lv_ambiq_set_blend_fill((lv_draw_ambiq_unit_t*)t->draw_unit, blending_mode);;
 
         //Set color
         nema_set_raster_color(bg_color);

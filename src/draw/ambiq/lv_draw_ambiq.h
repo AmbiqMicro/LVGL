@@ -13,7 +13,7 @@ extern "C" {
 /*********************
  *      INCLUDES
  *********************/
-#include "../lv_draw.h"
+#include "../lv_draw_private.h"
 #if LV_USE_DRAW_AMBIQ
 
 
@@ -30,103 +30,6 @@ extern "C" {
 #include "../lv_draw_arc.h"
 #include "../lv_draw_private.h"
 
-#include "../../misc/lv_area_private.h"
-
-#include "lv_draw_ambiq_color.h"
-
-#include "am_mcu_apollo.h"
-
-#include "nema_hal.h"
-#include "nema_math.h"
-#include "nema_core.h"
-#include "nema_regs.h"
-#include "nema_utils.h"
-#include "nema_event.h"
-#include "nema_raster.h"
-#include "nema_graphics.h"
-#include "nema_provisional.h"
-#include "nema_error.h"
-#include "nema_raster.h"
-#include "nema_blender.h"
-#include "nema_sys_defs.h"
-#include "nema_interpolators.h"
-#include "nema_matrix3x3.h"
-#include "nema_programHW.h"
-
-#if LV_USE_DRAW_AMBIQ_VG
-#include "nema_vg.h"
-#include "nema_vg_paint.h"
-#include "nema_vg_path.h"
-#include "nema_vg_font.h"
-#include "nema_vg_tsvg.h"
-#include "nema_vg_context.h"
-#endif
-
-#include "gpu_patch.h"
-
-/*********************
- *      DEFINES
- *********************/
-
-/**********************
- *      TYPEDEFS
- **********************/
-
-typedef struct {
-    lv_draw_unit_t base_unit;
-    lv_draw_task_t * task_act;
-#if LV_USE_OS
-    lv_thread_sync_t sync;
-    lv_thread_t thread;
-    volatile bool inited;
-    volatile bool exit_status;
-#endif
-
-    //! Record the size of allocated buffer.
-    uint32_t total_buffer;
-
-    //! Record total CLs created.
-    uint32_t total_cl;
-
-    //! Last CL submittion id, used for cl_wait()
-    int32_t last_cl_id;
-
-    //! CL list head
-    nema_cmdlist_t* cl_head;
-
-    //! gradient buffer
-    nema_buffer_t small_texture_buffer;
-
-    uint32_t small_texture_buffer_size_byte;
-
-#if LV_USE_VECTOR_GRAPHIC
-
-    //! VG path handle
-    NEMA_VG_PATH_HANDLE  vg_path;
-
-    //! VG paint handle
-    NEMA_VG_PAINT_HANDLE vg_paint;
-
-    //! VG gradient handle
-    NEMA_VG_GRAD_HANDLE vg_grad;
-#endif
-
-    // //! link list of inserted command lists
-    // lv_ll_t inserted_cl_ll;
-
-    //! mutex for inserted_cl_ll, prevent ll operations from different threads
-    lv_mutex_t mutex_nema_context;
-
-    uint32_t nema_context_lock_count;
-
-} lv_draw_ambiq_unit_t;
-
-/**********************
- * GLOBAL PROTOTYPES
- **********************/
-
-extern uint32_t nema_enable_aa_flags(uint32_t aa);
-
 /**
  * Initialize the AMBIQ GPU renderer.
  */
@@ -139,115 +42,125 @@ void lv_draw_ambiq_deinit(void);
 
 /**
  * Fill an area using AMBIQ GPU render. Handle gradient and radius.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the rectangle
  */
-void lv_draw_ambiq_fill(lv_draw_unit_t * draw_unit, const lv_draw_fill_dsc_t * dsc, const lv_area_t * coords);
+void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, const lv_area_t * coords);
 
 /**
  * Draw border with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the rectangle
  */
-void lv_draw_ambiq_border(lv_draw_unit_t * draw_unit, const lv_draw_border_dsc_t * dsc, const lv_area_t * coords);
+void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, const lv_area_t * coords);
 
 /**
  * Draw box shadow with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the rectangle for which the box shadow should be drawn
  */
-void lv_draw_ambiq_box_shadow(lv_draw_unit_t * draw_unit, const lv_draw_box_shadow_dsc_t * dsc, const lv_area_t * coords);
+void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t * dsc, const lv_area_t * coords);
 
 /**
  * Draw an image with AMBIQ GPU render. It handles image decoding, tiling, transformations, and recoloring.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the image
  */
-void lv_draw_ambiq_image(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t * draw_dsc,
+void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc,
                       const lv_area_t * coords);
 
 /**
  * Draw a label with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the label
  */
-void lv_draw_ambiq_label(lv_draw_unit_t * draw_unit, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords);
+void lv_draw_ambiq_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords);
+
+/**
+ * Draw a letter with AMBIQ GPU render.
+ * @param draw_task     pointer to a draw task
+ * @param dsc           the draw descriptor
+ * @param coords        the coordinates of the letter
+ */
+void lv_draw_ambiq_letter(lv_draw_task_t * t, const lv_draw_letter_dsc_t * dsc, const lv_area_t * coords);
 
 /**
  * Draw an arc with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the arc
  */
-void lv_draw_ambiq_arc(lv_draw_unit_t * draw_unit, const lv_draw_arc_dsc_t * dsc, const lv_area_t * coords);
+void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const lv_area_t * coords);
 
 /**
  * Draw a line with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  */
-void lv_draw_ambiq_line(lv_draw_unit_t * draw_unit, const lv_draw_line_dsc_t * dsc);
+void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc);
 
 /**
  * Blend a layer with AMBIQ GPU render
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the layer
  */
-void lv_draw_ambiq_layer(lv_draw_unit_t * draw_unit, const lv_draw_image_dsc_t * draw_dsc, const lv_area_t * coords);
+void lv_draw_ambiq_layer(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc, const lv_area_t * coords);
 
 /**
  * Draw a triangle with AMBIQ GPU render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  */
-void lv_draw_ambiq_triangle(lv_draw_unit_t * draw_unit, const lv_draw_triangle_dsc_t * dsc);
+void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * dsc);
 
 /**
  * Mask out a rectangle with radius from a current layer
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  * @param coords        the coordinates of the mask
  */
-void lv_draw_ambiq_mask_rect(lv_draw_unit_t * draw_unit, const lv_draw_mask_rect_dsc_t * dsc, const lv_area_t * coords);
-
-/**
- * Used internally to get a transformed are of an image
- * @param draw_unit     pointer to a draw unit
- * @param dest_area     the area to calculate, i.e. get this area from the transformed image
- * @param src_buf       the source buffer
- * @param src_w         source buffer width in pixels
- * @param src_h         source buffer height in pixels
- * @param src_stride    source buffer stride in bytes
- * @param dsc           the draw descriptor
- * @param sup           supplementary data
- * @param cf            color format of the source buffer
- * @param dest_buf      the destination buffer
- */
-void lv_draw_ambiq_transform(lv_draw_unit_t * draw_unit, const lv_area_t * dest_area, const void * src_buf,
-                          int32_t src_w, int32_t src_h, int32_t src_stride,
-                          const lv_draw_image_dsc_t * draw_dsc, const lv_draw_image_sup_t * sup, lv_color_format_t cf, void * dest_buf);
+void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t * dsc, const lv_area_t * coords);
 
 #if LV_USE_VECTOR_GRAPHIC
 /**
  * Draw vector graphics with AMBIQ render.
- * @param draw_unit     pointer to a draw unit
+ * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  */
-void lv_draw_ambiq_vector(lv_draw_unit_t * draw_unit, const lv_draw_vector_task_dsc_t * dsc);
+void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * dsc);
 #endif
 
 /**
- * Initialize the draw buffer handlers, see lv_ambiq_buffer.c.
+ * @brief Lock the Nema graphics context to ensure exclusive access.
+ * 
+ * This function is used to acquire a lock on the Nema graphics context,
+ * preventing other tasks or threads from accessing it simultaneously.
+ * It is essential to call this function before performing any drawing
+ * operations that require the Nema graphics context.
+ * 
+ * @return 
+ *      - LV_RESULT_OK: If the lock was successfully acquired.
+ *      - LV_RESULT_INVALID: If the lock could not be acquired.
  */
-void lv_draw_ambiq_init_buf_handlers(void);
-
 lv_result_t lv_draw_ambiq_nema_context_lock(void);
+
+/**
+ * @brief Unlock the Nema graphics context to allow access by others.
+ * 
+ * This function releases the lock on the Nema graphics context, enabling
+ * other tasks or threads to access it. It should be called after completing
+ * any drawing operations that required the context lock.
+ * 
+ * @return 
+ *      - LV_RESULT_OK: If the lock was successfully released.
+ *      - LV_RESULT_INVALID: If the unlock operation failed.
+ */
 lv_result_t lv_draw_ambiq_nema_context_unlock(void);
 
 /***********************

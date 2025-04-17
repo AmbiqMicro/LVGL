@@ -13,6 +13,7 @@
 #include "../../misc/lv_math.h"
 #include "../../core/lv_refr.h"
 #include "../../stdlib/lv_string.h"
+#include "lv_draw_ambiq_private.h"
 
 /*********************
  *      DEFINES
@@ -86,7 +87,7 @@ nema_raster_line_aa(float x0, float y0, float x1, float y1, float w)
     (void)nema_enable_aa_flags(prev_aa);
 }
 
-void lv_ambiq_dashline_create(uint32_t dash_width, uint32_t dash_gap, nema_buffer_t* buffer, uint32_t rgba_color)
+void lv_ambiq_dashline_create(lv_draw_ambiq_unit_t* unit, uint32_t dash_width, uint32_t dash_gap, nema_buffer_t* buffer, uint32_t rgba_color)
 {
     uint32_t dash_buffer_size_pixel = buffer->size/4;
 
@@ -97,7 +98,7 @@ void lv_ambiq_dashline_create(uint32_t dash_width, uint32_t dash_gap, nema_buffe
                   NEMA_RGBA8888,
                   0, NEMA_FILTER_BL|NEMA_TEX_REPEAT);
 
-    nema_set_blend(NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX);
+    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
 
 
     float ratio = (float)dash_width /(dash_width + dash_gap);
@@ -113,7 +114,7 @@ void lv_ambiq_dashline_create(uint32_t dash_width, uint32_t dash_gap, nema_buffe
 }
 
 
-void lv_draw_ambiq_line(lv_draw_unit_t * draw_unit, const lv_draw_line_dsc_t * dsc)
+void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
 {
     if(dsc->width == 0) return;
     if(dsc->opa <= LV_OPA_MIN) return;
@@ -127,11 +128,11 @@ void lv_draw_ambiq_line(lv_draw_unit_t * draw_unit, const lv_draw_line_dsc_t * d
     clip_line.y2 = (int32_t)LV_MAX(dsc->p1.y, dsc->p2.y) + dsc->width / 2;
 
     bool is_common;
-    is_common = lv_area_intersect(&clip_line, &clip_line, draw_unit->clip_area);
+    is_common = lv_area_intersect(&clip_line, &clip_line, &t->clip_area);
     if(!is_common) return;
 
-    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)draw_unit;
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
+    lv_layer_t * layer = t->target_layer;
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
     uint32_t blending_mode;
 
@@ -173,11 +174,11 @@ void lv_draw_ambiq_line(lv_draw_unit_t * draw_unit, const lv_draw_line_dsc_t * d
     if(dashed)
     {
         //Create dash in RGBA format
-        lv_ambiq_dashline_create(dsc->dash_width, dsc->dash_gap, &draw_ambiq_unit->small_texture_buffer, bg_color);
+        lv_ambiq_dashline_create(draw_ambiq_unit, dsc->dash_width, dsc->dash_gap, &draw_ambiq_unit->small_texture_buffer, bg_color);
         
 
         // set blend
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX);
+        lv_ambiq_change_blend_mode(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
 
 
         // transform
@@ -199,7 +200,7 @@ void lv_draw_ambiq_line(lv_draw_unit_t * draw_unit, const lv_draw_line_dsc_t * d
     }
     else
     {
-        nema_set_blend(blending_mode, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX);
+        lv_ambiq_set_blend_fill(draw_ambiq_unit, blending_mode);
         nema_set_raster_color(bg_color);
     }
 

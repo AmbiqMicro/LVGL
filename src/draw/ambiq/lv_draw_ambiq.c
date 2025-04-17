@@ -6,11 +6,12 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "../lv_draw.h"
+#include "../lv_draw_private.h"
 #if LV_USE_DRAW_AMBIQ
 
 #include "../../core/lv_refr.h"
 #include "lv_draw_ambiq.h"
+#include "lv_draw_ambiq_private.h"
 #include "../../display/lv_display_private.h"
 #include "../../stdlib/lv_string.h"
 #include "../../core/lv_global.h"
@@ -71,13 +72,18 @@ void lv_draw_ambiq_init(void)
     draw_ambiq_unit->vg_grad = nema_vg_grad_create();
 #endif
 
+    draw_ambiq_unit->blend_mode = 0;
+    draw_ambiq_unit->dst_tex = NEMA_NOTEX;
+    draw_ambiq_unit->fg_tex = NEMA_NOTEX;
+    draw_ambiq_unit->bg_tex = NEMA_NOTEX;
+
 //    lv_ll_init(&draw_ambiq_unit->inserted_cl_ll, sizeof(nema_cmdlist_t));
 
     draw_ambiq_unit->nema_context_lock_count = 0;
 
 #if LV_USE_OS
     lv_mutex_init(&draw_ambiq_unit->mutex_nema_context);
-    lv_thread_init(&draw_ambiq_unit->thread, LV_THREAD_PRIO_HIGH, render_thread_cb, 8 * 1024, draw_ambiq_unit);
+    lv_thread_init(&draw_ambiq_unit->thread, "ambiqdraw", LV_THREAD_PRIO_HIGH, render_thread_cb, LV_DRAW_THREAD_STACK_SIZE, draw_ambiq_unit);
 #endif
 
 //     // lv_gpu_ambiq_version_t gpu_lib_ver = {0};
@@ -184,6 +190,19 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
 
     switch(task->type) {
         case LV_DRAW_TASK_TYPE_FILL:
+            lv_draw_fill_dsc_t * draw_dsc_fill = task->draw_dsc;
+
+            if(draw_dsc_fill->grad.dir == LV_GRAD_DIR_RADIAL ||
+                draw_dsc_fill->grad.dir == LV_GRAD_DIR_CONICAL ||
+                draw_dsc_fill->grad.dir == LV_GRAD_DIR_LINEAR)
+            {
+                /**
+                 * Note: The underlying system supports these features; however, 
+                 * their full implementation and support are currently under development.
+                 */
+                return 0;
+            }
+
             task->preference_score = 10;
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
@@ -196,6 +215,19 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
         case LV_DRAW_TASK_TYPE_TRIANGLE:
+            //return 0;
+            lv_draw_triangle_dsc_t * draw_dsc_tri = task->draw_dsc;
+
+            if(draw_dsc_tri->grad.dir == LV_GRAD_DIR_RADIAL ||
+                draw_dsc_tri->grad.dir == LV_GRAD_DIR_CONICAL ||
+                draw_dsc_tri->grad.dir == LV_GRAD_DIR_LINEAR)
+            {
+                /**
+                 * Note: The underlying system supports these features; however, 
+                 * their full implementation and support are currently under development.
+                 */
+                return 0;
+            }
             task->preference_score = 10;
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;              
@@ -257,31 +289,29 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
 
 static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
 {
-    LV_PROFILER_BEGIN;
+    LV_PROFILER_DRAW_BEGIN;
     lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *) draw_unit;
 
     /*Return immediately if it's busy with draw task*/
     if(draw_ambiq_unit->task_act) {
-        LV_PROFILER_END;
+        LV_PROFILER_DRAW_END;
         return 0;
     }
 
     lv_draw_task_t * t = NULL;
-    t = lv_draw_get_next_available_task(layer, NULL, DRAW_UNIT_ID_AMBIQ);
+    t = lv_draw_get_available_task(layer, NULL, DRAW_UNIT_ID_AMBIQ);
     if(t == NULL) {
-        LV_PROFILER_END;
-        return -1;
+        LV_PROFILER_DRAW_END;
+        return LV_DRAW_UNIT_IDLE;
     }
 
     void * buf = lv_draw_layer_alloc_buf(layer);
     if(buf == NULL) {
-        LV_PROFILER_END;
-        return -1;
+        LV_PROFILER_DRAW_END;
+        return LV_DRAW_UNIT_IDLE;
     }
 
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
-    draw_ambiq_unit->base_unit.target_layer = layer;
-    draw_ambiq_unit->base_unit.clip_area = &t->clip_area;
     draw_ambiq_unit->task_act = t;
 
 #if LV_USE_OS
@@ -290,7 +320,7 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
 #else
     execute_drawing_unit(draw_ambiq_unit);
 #endif
-    LV_PROFILER_END;
+    LV_PROFILER_DRAW_END;
     return 1;
 }
 
@@ -347,16 +377,15 @@ static void render_thread_cb(void * ptr)
 
 static void execute_drawing(lv_draw_ambiq_unit_t * u)
 {
-    LV_PROFILER_BEGIN;
+    LV_PROFILER_DRAW_BEGIN;
 
     /*Render the draw task*/
     lv_draw_task_t * t = u->task_act;
-    lv_draw_unit_t * draw_unit = (lv_draw_unit_t *)u;
-    lv_layer_t * layer = draw_unit->target_layer;
+    lv_layer_t * layer = t->target_layer;
     lv_draw_buf_t * draw_buf = layer->draw_buf;
 
     lv_area_t clip_area;
-    lv_area_copy(&clip_area, draw_unit->clip_area);
+    lv_area_copy(&clip_area, &t->clip_area);
     lv_area_move(&clip_area, -layer->buf_area.x1, -layer->buf_area.y1);
 
     lv_area_t draw_area;
@@ -392,41 +421,49 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
                  des_format, draw_buf->header.stride,
                  0);
 
+    /* Set clip area*/
     nema_set_clip(clip_area.x1, clip_area.y1, lv_area_get_width(&clip_area), lv_area_get_height(&clip_area));
+
+    /* Clear internal blend mode status*/
+    lv_ambiq_clear_blend_mode(NULL);
 
     switch(t->type) {
         case LV_DRAW_TASK_TYPE_FILL:
-            lv_draw_ambiq_fill((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_fill(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_BORDER:
-            lv_draw_ambiq_border((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_border(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_TRIANGLE:
-            lv_draw_ambiq_triangle((lv_draw_unit_t *)u, t->draw_dsc);
+            lv_draw_ambiq_triangle(t, t->draw_dsc);
             break;
         case LV_DRAW_TASK_TYPE_LINE:
-            lv_draw_ambiq_line((lv_draw_unit_t *)u, t->draw_dsc);
+            lv_draw_ambiq_line(t, t->draw_dsc);
             break;  
         case LV_DRAW_TASK_TYPE_ARC:
-            lv_draw_ambiq_arc((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_arc(t, t->draw_dsc, &t->area);
             break; 
         case LV_DRAW_TASK_TYPE_IMAGE:
-            lv_draw_ambiq_image((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_image(t, t->draw_dsc, &t->area);
             break; 
         case LV_DRAW_TASK_TYPE_LABEL:
-            lv_draw_ambiq_label((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_label(t, t->draw_dsc, &t->area);
+            break;
+        case LV_DRAW_TASK_TYPE_LETTER:
+            //Under development.
+            //lv_draw_ambiq_letter(t, t->draw_dsc, &t->area);
             break;          
         case LV_DRAW_TASK_TYPE_BOX_SHADOW:
-            lv_draw_ambiq_box_shadow((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_box_shadow(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_MASK_RECTANGLE:
-            lv_draw_ambiq_mask_rect((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_mask_rect(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_LAYER:
-            lv_draw_ambiq_layer((lv_draw_unit_t *)u, t->draw_dsc, &t->area);
+            lv_draw_ambiq_layer(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_VECTOR:
-            lv_draw_ambiq_vector((lv_draw_unit_t *)u, t->draw_dsc);
+            lv_draw_ambiq_vector(t, t->draw_dsc);
             break;
 
         default:
@@ -454,7 +491,7 @@ static void execute_drawing(lv_draw_ambiq_unit_t * u)
     nema_cl_destroy(&cl);
 
 
-    LV_PROFILER_END;
+    LV_PROFILER_DRAW_END;
 }
 
 lv_result_t lv_draw_ambiq_nema_context_lock(void)
@@ -499,6 +536,11 @@ lv_result_t lv_draw_ambiq_nema_context_unlock(void)
     LV_ASSERT_MSG(draw_ambiq_unit->nema_context_lock_count == 0, "Ambiq GPU mutex lock count error!");    
     return LV_RESULT_OK;
 #endif
+}
+
+lv_draw_ambiq_unit_t * lv_draw_ambiq_get_default_unit(void)
+{
+    return draw_ambiq_unit;
 }
 
 // lv_result_t lv_draw_ambiq_nema_buffer_lock(void)
