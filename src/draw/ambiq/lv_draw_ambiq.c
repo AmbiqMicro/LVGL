@@ -32,7 +32,7 @@
     static void render_thread_cb(void * ptr);
 #endif
 
-static void execute_drawing(lv_draw_ambiq_unit_t * u);
+static void execute_drawing(lv_draw_task_t * t);
 
 static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer);
 static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task);
@@ -61,6 +61,7 @@ void lv_draw_ambiq_init(void)
     draw_ambiq_unit->base_unit.dispatch_cb = dispatch;
     draw_ambiq_unit->base_unit.evaluate_cb = evaluate;
     draw_ambiq_unit->base_unit.delete_cb = LV_USE_OS ? lv_draw_ambiq_delete : NULL;
+    draw_ambiq_unit->base_unit.name = "AMBIQ";
     draw_ambiq_unit->cl_head = NULL;
     draw_ambiq_unit->total_buffer = 0;
     draw_ambiq_unit->total_cl = 0;
@@ -141,6 +142,7 @@ static int32_t lv_draw_ambiq_delete(lv_draw_unit_t * draw_unit)
 
     nema_buffer_destroy(&draw_ambiq_unit->small_texture_buffer);
 
+#if LV_USE_VECTOR_GRAPHIC
     //Release VG path
     nema_vg_path_destroy(draw_ambiq_unit->vg_path);
 
@@ -149,9 +151,9 @@ static int32_t lv_draw_ambiq_delete(lv_draw_unit_t * draw_unit)
 
     //Release VG gradient
     nema_vg_grad_destroy(draw_ambiq_unit->vg_grad);
+#endif
 
-    //Release inserted command list
-    // lv_ll_clear(&draw_ambiq_unit->inserted_cl_ll);
+    
 
 #if LV_USE_OS
     LV_LOG_INFO("cancel Ambiq GPU rendering thread");
@@ -173,12 +175,14 @@ static int32_t lv_draw_ambiq_delete(lv_draw_unit_t * draw_unit)
 /**********************
  *   STATIC FUNCTIONS
  **********************/
-static inline void execute_drawing_unit(lv_draw_ambiq_unit_t * u)
+static inline void execute_drawing_unit(lv_draw_task_t * t)
 {
-    execute_drawing(u);
+    execute_drawing(t);
 
-    u->task_act->state = LV_DRAW_TASK_STATE_READY;
-    u->task_act = NULL;
+    lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
+
+    t->state = LV_DRAW_TASK_STATE_READY;
+    draw_ambiq_unit->task_act = NULL;
 
     /*The draw unit is free now. Request a new dispatching as it can get a new task*/
     lv_draw_dispatch_request();
@@ -312,13 +316,14 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     }
 
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
+    t->draw_unit = (lv_draw_unit_t *)draw_unit;
     draw_ambiq_unit->task_act = t;
 
 #if LV_USE_OS
     /*Let the render thread work*/
     if(draw_ambiq_unit->inited) lv_thread_sync_signal(&draw_ambiq_unit->sync);
 #else
-    execute_drawing_unit(draw_ambiq_unit);
+    execute_drawing_unit(t);
 #endif
     LV_PROFILER_DRAW_END;
     return 1;
@@ -365,7 +370,7 @@ static void render_thread_cb(void * ptr)
         //     lv_mutex_unlock(&u->mutex_inserted_cl_ll);
         // }
 
-        execute_drawing_unit(u);
+        execute_drawing_unit(u->task_act);
     }
 
     u->inited = false;
@@ -375,12 +380,11 @@ static void render_thread_cb(void * ptr)
 }
 #endif
 
-static void execute_drawing(lv_draw_ambiq_unit_t * u)
+static void execute_drawing(lv_draw_task_t * t)
 {
     LV_PROFILER_DRAW_BEGIN;
 
     /*Render the draw task*/
-    lv_draw_task_t * t = u->task_act;
     lv_layer_t * layer = t->target_layer;
     lv_draw_buf_t * draw_buf = layer->draw_buf;
 

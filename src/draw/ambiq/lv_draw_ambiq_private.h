@@ -42,6 +42,7 @@ extern "C" {
 #include "nema_raster.h"
 #include "nema_graphics.h"
 #include "nema_provisional.h"
+#include "nema_interpolators.h"
 #include "nema_error.h"
 #include "nema_raster.h"
 #include "nema_blender.h"
