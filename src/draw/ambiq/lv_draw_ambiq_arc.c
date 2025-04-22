@@ -269,7 +269,7 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
         nema_cmdlist_t * cl = nema_cl_get_bound();
         nema_cl_submit(cl);
         nema_cl_wait(cl);
-        //nema_cl_rewind(cl);
+        nema_cl_rewind(cl);
 
         lv_image_decoder_close(&decoder_dsc);
     }

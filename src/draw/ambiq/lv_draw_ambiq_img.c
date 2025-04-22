@@ -185,7 +185,7 @@ void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
         nema_cmdlist_t * current_cl = nema_cl_get_bound();
         nema_cl_submit(current_cl);
         nema_cl_wait(current_cl);
-        //nema_cl_rewind(current_cl);
+        nema_cl_rewind(current_cl);
 
         lv_image_decoder_close(&decoder_dsc);
         if(need_release_mask_decoder) lv_image_decoder_close(&mask_decoder_dsc);
@@ -447,30 +447,31 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
         nema_mat3x3_scale(m, draw_dsc->scale_x/256.f, draw_dsc->scale_y/256.f);
         nema_mat3x3_rotate(m, draw_dsc->rotation/10.f);
         nema_mat3x3_shear(m, draw_dsc->skew_x/10.f, draw_dsc->skew_y/10.f);
-        nema_mat3x3_translate(m, draw_dsc->pivot.x, draw_dsc->pivot.x);
+        nema_mat3x3_translate(m, draw_dsc->pivot.x, draw_dsc->pivot.y);
+        //handle the special case when the image coordinate is not the same as draw coordinate
+        nema_mat3x3_translate(m, coords->x1  - layer->buf_area.x1, coords->y1  - layer->buf_area.y1); 
 
+        //save the matrix before invert
         nema_matrix3x3_t m_draw;
         nema_mat3x3_copy(m_draw, m);
 
-
-        //handle the special case when the image coordinate is not the same as draw coordinate
-        nema_mat3x3_translate(m, draw_dsc->image_area.x1  - layer->buf_area.x1, draw_dsc->image_area.y1  - layer->buf_area.y1); 
+        // invert the matrix
         nema_mat3x3_invert(m);
         nema_set_matrix(m);
 
 
 
-        //rotate points
-        nema_mat3x3_translate(m_draw, coords->x1  - layer->buf_area.x1, coords->y1  - layer->buf_area.y1); 
+        // //rotate points
+        // nema_mat3x3_translate(m_draw, coords->x1  - layer->buf_area.x1, coords->y1  - layer->buf_area.y1); 
         
         float x0 = 0;
         float y0 = 0;
-        float x1 = x0 + lv_area_get_width(coords);
+        float x1 = x0 + lv_area_get_width(coords) - 1;
         float y1 = y0;
-        float x2 = x0 + lv_area_get_width(coords);
-        float y2 = y0 + lv_area_get_height(coords);
+        float x2 = x0 + lv_area_get_width(coords) - 1;
+        float y2 = y0 + lv_area_get_height(coords) - 1;
         float x3 = x0;
-        float y3 = y0 + lv_area_get_height(coords);
+        float y3 = y0 + lv_area_get_height(coords) - 1;
 
         nema_mat3x3_mul_vec(m_draw, &x0, &y0);
         nema_mat3x3_mul_vec(m_draw, &x1, &y1);
