@@ -122,7 +122,7 @@ uint32_t bind_background_image(const lv_draw_arc_dsc_t * dsc, lv_image_decoder_d
                 header->w,
                 header->h,
                 nema_cf,
-                -1,
+                header->stride,
                 NEMA_FILTER_PS|tex_wrap_mode);
     
 
