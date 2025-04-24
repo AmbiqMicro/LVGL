@@ -200,8 +200,14 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
 
         ptr_decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
 
+        lv_image_decoder_args_t args;
+        args.premultiply = false;
+        args.stride_align = false;
+        args.use_indexed = true;
+        args.no_cache = false;
+        args.flush_cache = false;
 
-        lv_result_t res = lv_image_decoder_open(ptr_decoder_dsc, img_dsc->src, NULL);
+        lv_result_t res = lv_image_decoder_open(ptr_decoder_dsc, img_dsc->src, &args);
         if(res != LV_RESULT_OK) 
         {
             lv_free(ptr_decoder_dsc);

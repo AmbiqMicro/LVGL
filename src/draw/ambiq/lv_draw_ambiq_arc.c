@@ -187,7 +187,14 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
 
     if(dsc->img_src)
     {
-        lv_result_t res = lv_image_decoder_open(&decoder_dsc, dsc->img_src, NULL);
+        lv_image_decoder_args_t args;
+        args.premultiply = false;
+        args.stride_align = false;
+        args.use_indexed = true;
+        args.no_cache = false;
+        args.flush_cache = false;
+
+        lv_result_t res = lv_image_decoder_open(&decoder_dsc, dsc->img_src, &args);
         if(res != LV_RESULT_OK) 
         {
             LV_LOG_ERROR("Failed to open image");
