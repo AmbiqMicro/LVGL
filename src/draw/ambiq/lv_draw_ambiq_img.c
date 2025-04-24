@@ -68,8 +68,19 @@ void lv_draw_ambiq_layer(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
 void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc,
                       const lv_area_t * coords)
 {
+    bool transformed = draw_dsc->rotation != 0 || draw_dsc->scale_x != LV_SCALE_NONE ||
+                       draw_dsc->scale_y != LV_SCALE_NONE || draw_dsc->skew_y != 0 || draw_dsc->skew_x != 0 ? true : false;
+
+
+    lv_image_decoder_args_t args;
+    args.premultiply = false;
+    args.stride_align = false;
+    args.use_indexed = transformed ? false : true;
+    args.no_cache = false;
+    args.flush_cache = false;
+
     lv_image_decoder_dsc_t decoder_dsc;
-    lv_result_t res = lv_image_decoder_open(&decoder_dsc, draw_dsc->src, NULL);
+    lv_result_t res = lv_image_decoder_open(&decoder_dsc, draw_dsc->src, &args);
     if(res != LV_RESULT_OK) {
         LV_LOG_ERROR("Failed to open image");
         return;
@@ -82,7 +93,7 @@ void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
         return;
     }
 
-    lv_image_header_t * header = &decoder_dsc.header;
+    lv_image_header_t * header = &decoder_dsc.decoded->header;
 
 
     const lv_draw_buf_t * mask_img = NULL;
@@ -124,9 +135,7 @@ void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
 
     if(draw_dsc->tile)
     {
-        if(draw_dsc->rotation 
-        || draw_dsc->scale_x != LV_SCALE_NONE || draw_dsc->scale_y != LV_SCALE_NONE
-        || draw_dsc->skew_x || draw_dsc->skew_y) 
+        if(transformed) 
         {
              LV_LOG_WARN("Set rotation/scale/skew effect to tile image is not supported! We will ignore these parameters.");
         }
@@ -155,8 +164,7 @@ void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
 
         lv_area_t draw_area;
         lv_area_copy(&draw_area, coords);
-        if(draw_dsc->rotation || draw_dsc->scale_x != LV_SCALE_NONE 
-            || draw_dsc->scale_y != LV_SCALE_NONE) {
+        if(transformed) {
             int32_t w = lv_area_get_width(coords);
             int32_t h = lv_area_get_height(coords);
 
@@ -204,7 +212,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
                                     const lv_draw_buf_t* mask_image)
 {
 
-    lv_image_header_t*  header = &decoder_dsc->header;   
+    lv_image_header_t*  header = &decoder_dsc->decoded->header;   
 
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     if(nema_cf == COLOR_FORMAT_INVALID)
@@ -255,6 +263,8 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
         nema_set_const_color(global_opa<<24);
     }
 
+    uint32_t lut_size = 0;
+
     // handle look up table(LUT) color format
     if((header->cf == LV_COLOR_FORMAT_I1) ||
     (header->cf == LV_COLOR_FORMAT_I2) ||
@@ -263,7 +273,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
     {
         blending_mode |= NEMA_BLOP_LUT;
 
-        uint32_t lut_size;
+        
         switch(header->cf) {
             case LV_COLOR_FORMAT_I1:
                 lut_size = 2U;
@@ -281,7 +291,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
 
         // LUT/PALETTE
         nema_bind_tex(NEMA_TEX2,
-                      (uintptr_t)decoder_dsc->palette,
+                      (uintptr_t)decoder_dsc->decoded->data,
                       lut_size,
                       1,
                       NEMA_BGRA8888,
@@ -382,7 +392,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
     //bind image
     uint32_t tex_wrap_mode = (draw_dsc->tile && !tile_draw_one_by_one) ? NEMA_TEX_REPEAT : NEMA_TEX_BORDER;
     nema_bind_tex(NEMA_TEX1,
-                (uintptr_t)decoder_dsc->decoded->data,
+                (uintptr_t)decoder_dsc->decoded->data + lut_size * 4,
                 header->w,
                 header->h,
                 nema_cf,
