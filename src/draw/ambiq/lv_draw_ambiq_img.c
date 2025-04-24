@@ -386,7 +386,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
                 header->w,
                 header->h,
                 nema_cf,
-                -1,
+                header->stride,
                 NEMA_FILTER_BL|tex_wrap_mode);
     
 
