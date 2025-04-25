@@ -91,6 +91,12 @@ static uint32_t lv_draw_ambiq_buffer_width_to_stride(uint32_t w, lv_color_format
 
 static inline void lv_draw_ambiq_buffer_flush_core(uint32_t pool, const lv_draw_buf_t * draw_buf, const lv_area_t * area)
 {
+    if(!(draw_buf->header.flags & LV_IMAGE_FLAGS_ALLOCATED)) 
+    {
+        // It is static buffer, no need to flush
+        return;
+    }
+
     nema_buffer_t nema_buf = {
         .base_virt = draw_buf->data,
         .base_phys = (uintptr_t)draw_buf->data,

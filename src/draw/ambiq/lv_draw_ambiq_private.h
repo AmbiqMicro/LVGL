@@ -155,6 +155,10 @@ void lv_ambiq_blend_mode_change(lv_draw_ambiq_unit_t* unit, uint32_t blending_mo
                                  nema_tex_t dst_tex, nema_tex_t fg_tex, nema_tex_t bg_tex, bool force);
 void lv_ambiq_blend_mode_clear(lv_draw_ambiq_unit_t* unit);
 lv_draw_ambiq_unit_t * lv_draw_ambiq_get_default_unit(void);
+uint32_t lv_draw_ambiq_bind_image_texture(const lv_draw_buf_t * decoded, uint32_t color_rgba, uint32_t tex_wrap_mode);
+uint32_t lv_draw_ambiq_bind_mask_texture(const lv_draw_buf_t * mask_image, bool multiply);
+lv_result_t lv_draw_ambiq_decode_image(const void* src, bool transformed, lv_image_decoder_dsc_t* decoder_dsc, bool is_mask);
+
 
 void lv_ambiq_clip_area_change(lv_draw_ambiq_unit_t * unit, const lv_area_t* clip_area, bool force);
 void lv_ambiq_clip_area_clear(lv_draw_ambiq_unit_t * unit);
