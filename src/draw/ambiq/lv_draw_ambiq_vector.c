@@ -191,75 +191,97 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
                                     const lv_draw_image_dsc_t * img_dsc)
 {
 
-        ptr_decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
+    ptr_decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
 
-        lv_image_decoder_args_t args;
-        args.premultiply = false;
-        args.stride_align = false;
-        args.use_indexed = true;
-        args.no_cache = false;
-        args.flush_cache = false;
+        // lv_image_decoder_args_t args;
+        // args.premultiply = false;
+        // args.stride_align = false;
+        // args.use_indexed = true;
+        // args.no_cache = false;
+        // args.flush_cache = false;
 
-        lv_result_t res = lv_image_decoder_open(ptr_decoder_dsc, img_dsc->src, &args);
-        if(res != LV_RESULT_OK) 
-        {
-            lv_free(ptr_decoder_dsc);
-            ptr_decoder_dsc = NULL;
-            LV_LOG_ERROR("Failed to open image");
-            return;
-        }
-        else
-        { 
-            if(ptr_decoder_dsc->decoded == NULL) 
-            {
-                /*The whole image is not available, we can't draw it with GPU*/
-                LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
-                lv_image_decoder_close(ptr_decoder_dsc);
-                lv_free(ptr_decoder_dsc);
-                ptr_decoder_dsc = NULL;
-                return;
-            }
-            else
-            {
-                nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(ptr_decoder_dsc->header.cf);
-                if(nema_cf == COLOR_FORMAT_INVALID)
-                {
-                    LV_LOG_WARN("GPU failed, not supported color format!");
-                    lv_image_decoder_close(ptr_decoder_dsc);
-                    lv_free(ptr_decoder_dsc);
-                    ptr_decoder_dsc = NULL;
-                    return ;
-                }
+        // lv_result_t res = lv_image_decoder_open(ptr_decoder_dsc, img_dsc->src, &args);
+        // if(res != LV_RESULT_OK) 
+        // {
+        //     lv_free(ptr_decoder_dsc);
+        //     ptr_decoder_dsc = NULL;
+        //     LV_LOG_ERROR("Failed to open image");
+        //     return;
+        // }
+        // else
+        // { 
+        //     if(ptr_decoder_dsc->decoded == NULL) 
+        //     {
+        //         /*The whole image is not available, we can't draw it with GPU*/
+        //         LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
+        //         lv_image_decoder_close(ptr_decoder_dsc);
+        //         lv_free(ptr_decoder_dsc);
+        //         ptr_decoder_dsc = NULL;
+        //         return;
+        //     }
+        //     else
+        //     {
+        //         nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(ptr_decoder_dsc->header.cf);
+        //         if(nema_cf == COLOR_FORMAT_INVALID)
+        //         {
+        //             LV_LOG_WARN("GPU failed, not supported color format!");
+        //             lv_image_decoder_close(ptr_decoder_dsc);
+        //             lv_free(ptr_decoder_dsc);
+        //             ptr_decoder_dsc = NULL;
+        //             return ;
+        //         }
 
-                if(ptr_decoder_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8)
-                {
-                    LV_LOG_WARN("not support RGB565A8 color format for vector graphics!");
-                    lv_image_decoder_close(ptr_decoder_dsc);
-                    lv_free(ptr_decoder_dsc);
-                    ptr_decoder_dsc = NULL;
-                    return ;   
-                }
+        //         if(ptr_decoder_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8)
+        //         {
+        //             LV_LOG_WARN("not support RGB565A8 color format for vector graphics!");
+        //             lv_image_decoder_close(ptr_decoder_dsc);
+        //             lv_free(ptr_decoder_dsc);
+        //             ptr_decoder_dsc = NULL;
+        //             return ;   
+        //         }
 
-            }
-        }
+        //     }
+        // }
+
+    lv_result_t decode_res =  lv_draw_ambiq_decode_image(img_dsc->src, false, ptr_decoder_dsc, false);
+    if(decode_res != LV_RESULT_OK) 
+    {
+        lv_free(ptr_decoder_dsc);
+        ptr_decoder_dsc = NULL;
+        LV_LOG_ERROR("Failed to decode image");
+        return;
+    }
+    else if(ptr_decoder_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8) 
+    {
+        LV_LOG_WARN("not support RGB565A8 color format for vector graphics!");
+        lv_image_decoder_close(ptr_decoder_dsc);
+        lv_free(ptr_decoder_dsc);
+        ptr_decoder_dsc = NULL;
+        return;   
+    }
+
+    if(img_dsc->recolor_opa > LV_OPA_MIN)
+    {
+        LV_LOG_WARN("recolor is not support in vector graphics, ignore it!"); 
+    }
+
+    //todo: support tile
+    //todo: support transform
+    bool transformed = img_dsc->rotation != 0 || img_dsc->scale_x != LV_SCALE_NONE ||
+                       img_dsc->scale_y != LV_SCALE_NONE || img_dsc->skew_y != 0 || img_dsc->skew_x != 0 ? true : false;
+    if(transformed)
+    {
+        LV_LOG_WARN("image are bounded to the bounding box of the path, any relative transformation will be ignored!");
+    }
     
     const lv_image_header_t* header = &ptr_decoder_dsc->decoded->header;
-    uint32_t bg_color = lv_ambiq_color_convert(img_dsc->recolor, img_dsc->recolor_opa);
+    uint32_t bg_color = lv_ambiq_color_convert(img_dsc->recolor, img_dsc->opa);
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
-    bool LUT_texture = false;
 
     nema_img_obj_t* img_obj = lv_malloc(sizeof(nema_img_obj_t));
     nema_img_obj_t* palette_obj = lv_malloc(sizeof(nema_img_obj_t));
 
-    //bind image
-    img_obj->bo.base_virt = (void *)ptr_decoder_dsc->decoded->data;
-    img_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->decoded->data;
-    img_obj->bo.size = ptr_decoder_dsc->decoded->data_size;
-    img_obj->format = nema_cf;
-    img_obj->w = header->w;
-    img_obj->h = header->h;
-    img_obj->stride = -1;
-    img_obj->sampling_mode = NEMA_FILTER_BL|NEMA_TEX_BORDER;
+    uint32_t lut_size = 0;
 
     // handle look up table(LUT) color format
     if((header->cf == LV_COLOR_FORMAT_I1) ||
@@ -267,8 +289,6 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
     (header->cf == LV_COLOR_FORMAT_I4) ||
     (header->cf == LV_COLOR_FORMAT_I8))
     {
-
-        uint32_t lut_size;
         switch(header->cf) {
             case LV_COLOR_FORMAT_I1:
                 lut_size = 2U;
@@ -285,16 +305,24 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
         }
 
         // LUT PALETTE
-        palette_obj->bo.base_virt = (void *)ptr_decoder_dsc->palette;
-        palette_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->palette;
+        palette_obj->bo.base_virt = (void *)ptr_decoder_dsc->decoded->data;
+        palette_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->decoded->data;
         palette_obj->bo.size = lut_size*4;
         palette_obj->format = NEMA_BGRA8888;
         palette_obj->w = lut_size;
         palette_obj->h = 1;
         palette_obj->stride = -1;
-
-        LUT_texture = true;
     }
+
+    //bind image
+    img_obj->bo.base_phys = (uintptr_t)ptr_decoder_dsc->decoded->data + lut_size * 4;
+    img_obj->bo.base_virt = (void *)img_obj->bo.base_phys;
+    img_obj->bo.size = ptr_decoder_dsc->decoded->data_size;
+    img_obj->format = nema_cf;
+    img_obj->w = header->w;
+    img_obj->h = header->h;
+    img_obj->stride = header->stride;
+    img_obj->sampling_mode = NEMA_FILTER_BL|NEMA_TEX_BORDER;
 
     // handle alpha only color format
     if((header->cf == LV_COLOR_FORMAT_A1) ||
@@ -309,7 +337,7 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
         nema_set_tex_color(0x0);
     }
 
-    if(LUT_texture)
+    if(lut_size != 0)
     {
         nema_vg_paint_set_lut_tex(vg_paint, palette_obj, img_obj);
     }
