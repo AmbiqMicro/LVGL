@@ -81,24 +81,13 @@ typedef struct {
     volatile bool exit_status;
 #endif
 
-    //! Record the size of allocated buffer.
-    uint32_t total_buffer;
+    //! gradient buffer and small texture buffer
+    lv_draw_buf_t* small_texture_buffer;
 
-    //! Record total CLs created.
-    uint32_t total_cl;
+    //! stencil buffer for VG and other widgets
+    lv_draw_buf_t* stencil_buffer;
 
-    //! Last CL submittion id, used for cl_wait()
-    int32_t last_cl_id;
-
-    //! CL list head
-    nema_cmdlist_t* cl_head;
-
-    //! gradient buffer
-    nema_buffer_t small_texture_buffer;
-
-    uint32_t small_texture_buffer_size_byte;
-
-#if LV_USE_VECTOR_GRAPHIC
+#if LV_USE_DRAW_AMBIQ_VG
 
     //! VG path handle
     NEMA_VG_PATH_HANDLE  vg_path;
@@ -122,13 +111,24 @@ typedef struct {
     //! current background texture
     nema_tex_t bg_tex;
 
-    // //! link list of inserted command lists
-    // lv_ll_t inserted_cl_ll;
+    //! the destination buffer
+    lv_draw_buf_t des_buffer;
+
+    //! the clip area
+    lv_area_t clip_area;
 
     //! mutex for inserted_cl_ll, prevent ll operations from different threads
     lv_mutex_t mutex_nema_context;
-
     uint32_t nema_context_lock_count;
+
+    //! the command list used for drawing.
+    nema_cmdlist_t cl;
+
+    // link list of opened and decoded images
+    lv_ll_t opened_img_ll;
+
+    // link list of loaded glyph bitmaps
+    lv_ll_t loaded_glyph_ll;
 
 } lv_draw_ambiq_unit_t;
 
@@ -144,9 +144,6 @@ extern uint32_t nema_enable_aa_flags(uint32_t aa);
  */
 void lv_draw_ambiq_init_buf_handlers(void);
 
-lv_result_t lv_draw_ambiq_nema_context_lock(void);
-lv_result_t lv_draw_ambiq_nema_context_unlock(void);
-
 
 nema_tex_format_t lv_ambiq_color_format_map_src(lv_color_format_t lvgl_cf);
 nema_tex_format_t lv_ambiq_color_format_map_des(lv_color_format_t lvgl_cf);
@@ -154,10 +151,19 @@ uint32_t lv_ambiq_color_convert(lv_color_t color, lv_opa_t opa);
 
 void lv_ambiq_set_blend_blit(lv_draw_ambiq_unit_t* unit, uint32_t blending_mode);
 void lv_ambiq_set_blend_fill(lv_draw_ambiq_unit_t* unit, uint32_t blending_mode);
-void lv_ambiq_change_blend_mode(lv_draw_ambiq_unit_t* unit, uint32_t blending_mode, 
+void lv_ambiq_blend_mode_change(lv_draw_ambiq_unit_t* unit, uint32_t blending_mode, 
                                  nema_tex_t dst_tex, nema_tex_t fg_tex, nema_tex_t bg_tex, bool force);
-void lv_ambiq_clear_blend_mode(lv_draw_ambiq_unit_t* unit);
+void lv_ambiq_blend_mode_clear(lv_draw_ambiq_unit_t* unit);
 lv_draw_ambiq_unit_t * lv_draw_ambiq_get_default_unit(void);
+
+void lv_ambiq_clip_area_change(lv_draw_ambiq_unit_t * unit, const lv_area_t* clip_area, bool force);
+void lv_ambiq_clip_area_clear(lv_draw_ambiq_unit_t * unit);
+
+lv_result_t lv_draw_ambiq_stencil_buffer_adjust(lv_draw_ambiq_unit_t* unit, uint32_t width, uint32_t height);
+
+lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t *buf_dsc, const lv_area_t *clip_area_raw, bool extend_color_format_support);
+lv_result_t lv_draw_ambiq_common_end(bool sync);
+lv_result_t lv_draw_ambiq_vg_start(uint32_t width, uint32_t hight);
 
 /***********************
  * GLOBAL VARIABLES

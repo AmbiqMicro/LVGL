@@ -103,15 +103,20 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
         colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;               
     }
 
-    lv_ambiq_gradient_create(stops_count, stops, colors, &draw_ambiq_unit->small_texture_buffer);
+    nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_ambiq_unit->small_texture_buffer->data,
+                  draw_ambiq_unit->small_texture_buffer->header.w,
+                  1,
+                  NEMA_RGBA8888,
+                  0, NEMA_FILTER_BL);
+    lv_ambiq_gradient_create(stops_count, stops, colors, NEMA_TEX1);
 
-    lv_ambiq_change_blend_mode(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
+    lv_ambiq_blend_mode_change(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
 
     int32_t start_x = tri_area.x1 - layer->buf_area.x1;
     int32_t start_y = tri_area.y1 - layer->buf_area.y1;
     uint32_t width = lv_area_get_width(&tri_area);
     uint32_t hight = lv_area_get_height(&tri_area);
-    uint32_t gradient_texture_width = draw_ambiq_unit->small_texture_buffer.size/4;
+    uint32_t gradient_texture_width = draw_ambiq_unit->small_texture_buffer->header.w;
 
     nema_matrix3x3_t m;
     float rotate_angle = (grad_dir == LV_GRAD_DIR_HOR) ? 0.f : 90.f;
