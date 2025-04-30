@@ -87,32 +87,6 @@ nema_raster_line_aa(float x0, float y0, float x1, float y1, float w)
     (void)nema_enable_aa_flags(prev_aa);
 }
 
-void lv_ambiq_dashline_create(lv_draw_ambiq_unit_t* unit, uint32_t dash_width, uint32_t dash_gap, nema_buffer_t* buffer, uint32_t rgba_color)
-{
-    uint32_t dash_buffer_size_pixel = buffer->size/4;
-
-    nema_set_clip_temp(0 , 0 , dash_buffer_size_pixel, 1);
-    nema_bind_tex(NEMA_TEX1, (uintptr_t)buffer->base_phys,
-                  dash_buffer_size_pixel,
-                  1,
-                  NEMA_RGBA8888,
-                  0, NEMA_FILTER_BL|NEMA_TEX_REPEAT);
-
-    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
-
-
-    float ratio = (float)dash_width /(dash_width + dash_gap);
-    uint32_t w = (uint32_t)((float)dash_buffer_size_pixel * ratio);
-
-    nema_set_raster_color(rgba_color);
-    nema_raster_rect(0, 0, w, 1);
-
-    nema_set_raster_color(0x0);
-    nema_raster_rect(w, 0, (dash_buffer_size_pixel - w), 1);
-
-    nema_set_clip_pop();
-}
-
 
 void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
 {
@@ -174,17 +148,22 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
     if(dashed)
     {
         //Create dash in RGBA format
-        lv_ambiq_dashline_create(draw_ambiq_unit, dsc->dash_width, dsc->dash_gap, &draw_ambiq_unit->small_texture_buffer, bg_color);
+        nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_ambiq_unit->small_texture_buffer->data,
+                      draw_ambiq_unit->small_texture_buffer->header.w,
+                      1,
+                      NEMA_RGBA8888,
+                      0, NEMA_FILTER_BL|NEMA_TEX_REPEAT);
+        lv_ambiq_dashline_create(dsc->dash_width, dsc->dash_gap, bg_color, NEMA_TEX1);
         
 
         // set blend
-        lv_ambiq_change_blend_mode(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
+        lv_ambiq_blend_mode_change(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
 
 
         // transform
         nema_matrix3x3_t m;
         float rotate_angle = (dsc->p2.x >= dsc->p1.x) ? angle : 180 + angle ;
-        float scale_x = (float)(dsc->dash_gap + dsc->dash_width) / (draw_ambiq_unit->small_texture_buffer.size/4);
+        float scale_x = (float)(dsc->dash_gap + dsc->dash_width) / (draw_ambiq_unit->small_texture_buffer->header.w);
         float scale_y = w;
 
         nema_mat3x3_load_identity(m);

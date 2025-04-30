@@ -95,19 +95,23 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
     /*transformation matrix for texture mapping*/
     nema_matrix3x3_t m;
 
-    /* Malloc a buffer to hold the mask*/
-    lv_draw_buf_t * mask_buffer = lv_draw_buf_create(radius, radius, LV_COLOR_FORMAT_A8, 0);
-    if(mask_buffer == NULL) 
-    {
+    /* bind the stencil buffer to TEX1*/
+
+    lv_result_t res = lv_draw_ambiq_stencil_buffer_adjust(unit, radius, radius);
+    if(res != LV_RESULT_OK) {
         LV_LOG_ERROR("Failed to allocate memory for stencil buffer");
         return;
     }
-
-    /* bind the stencil buffer to TEX1*/
-    nema_bind_tex(NEMA_TEX1, (uintptr_t)mask_buffer->data, radius, radius, NEMA_L8, -1, NEMA_FILTER_PS);
+    nema_bind_tex(NEMA_TEX1, 
+                  (uintptr_t)unit->stencil_buffer->data, 
+                  unit->stencil_buffer->header.w, 
+                  unit->stencil_buffer->header.h, 
+                  NEMA_L8, 
+                  unit->stencil_buffer->header.stride, 
+                  NEMA_FILTER_BL);
 
     /* set the blend mode to SRC*/
-    lv_ambiq_change_blend_mode(unit,  NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
+    lv_ambiq_blend_mode_change(unit,  NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
     nema_set_clip_temp(0 , 0 , radius, radius);
 
     /* draw the mask to this buffer*/
@@ -118,8 +122,14 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
 
     nema_set_clip_pop();
 
-    nema_bind_tex(NEMA_TEX1, (uintptr_t)mask_buffer->data, radius, radius, NEMA_A8, -1, NEMA_FILTER_PS);
-    lv_ambiq_change_blend_mode(unit, NEMA_BL_DST_IN, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
+    nema_bind_tex(NEMA_TEX1, 
+        (uintptr_t)unit->stencil_buffer->data, 
+        unit->stencil_buffer->header.w, 
+        unit->stencil_buffer->header.h, 
+        NEMA_A8, 
+        unit->stencil_buffer->header.stride, 
+        NEMA_FILTER_BL);
+    lv_ambiq_blend_mode_change(unit, NEMA_BL_DST_IN, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
     nema_set_tex_color(0xffffffff);
 
     lv_area_t blend_area;
@@ -225,8 +235,6 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
     nema_cl_submit(cl);
     nema_cl_wait(cl);
     nema_cl_rewind(cl);
-
-    lv_draw_buf_destroy(mask_buffer);
 }
 
 

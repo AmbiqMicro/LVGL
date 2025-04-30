@@ -21,8 +21,6 @@
 
 #include <math.h>
 
-
-
 /*********************
  *      DEFINES
  *********************/
@@ -65,8 +63,6 @@ void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * 
         return;
 
     /*handle the layer buffer offset by setting a global matrix*/
-    nema_vg_reset_global_matrix();
-
     nema_matrix3x3_t matrix;
 
     nema_mat3x3_load_identity(matrix);
@@ -79,9 +75,6 @@ void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * 
     nema_vg_set_global_matrix(matrix);
 
     /*handle each path*/
-
-
-
     LV_PROFILER_DRAW_BEGIN;
     lv_vector_for_each_destroy_tasks(dsc->task_list, task_draw_cb, t);
     LV_PROFILER_DRAW_END;
@@ -530,9 +523,7 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
     lv_area_t scissor_area = dsc->scissor_area;
     lv_area_move(&scissor_area, layer_start_x, layer_start_y);
 
-    nema_set_clip(scissor_area.x1, scissor_area.y1, 
-                lv_area_get_width(&scissor_area), 
-                lv_area_get_height(&scissor_area));
+    lv_ambiq_clip_area_change(unit, &scissor_area, false);
 
     /* clear area */
     if(!path) {
@@ -555,8 +546,6 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
         blend = NEMA_BL_SIMPLE;
     }
     nema_vg_set_blend(blend);
-    lv_ambiq_clear_blend_mode(unit);
-
 
     /* set path quality */
     uint32_t quality = lv_vector_quality_to_nema(path->quality);

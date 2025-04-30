@@ -136,33 +136,6 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
 void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * dsc);
 #endif
 
-/**
- * @brief Lock the Nema graphics context to ensure exclusive access.
- * 
- * This function is used to acquire a lock on the Nema graphics context,
- * preventing other tasks or threads from accessing it simultaneously.
- * It is essential to call this function before performing any drawing
- * operations that require the Nema graphics context.
- * 
- * @return 
- *      - LV_RESULT_OK: If the lock was successfully acquired.
- *      - LV_RESULT_INVALID: If the lock could not be acquired.
- */
-lv_result_t lv_draw_ambiq_nema_context_lock(void);
-
-/**
- * @brief Unlock the Nema graphics context to allow access by others.
- * 
- * This function releases the lock on the Nema graphics context, enabling
- * other tasks or threads to access it. It should be called after completing
- * any drawing operations that required the context lock.
- * 
- * @return 
- *      - LV_RESULT_OK: If the lock was successfully released.
- *      - LV_RESULT_INVALID: If the unlock operation failed.
- */
-lv_result_t lv_draw_ambiq_nema_context_unlock(void);
-
 /***********************
  * GLOBAL VARIABLES
  ***********************/
