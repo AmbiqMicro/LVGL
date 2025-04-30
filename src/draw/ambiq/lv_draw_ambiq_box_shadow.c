@@ -131,22 +131,20 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     nema_matrix3x3_t m;
 
     /* stencil buffer to hold the shadow */
-    /* TODO */
-    lv_draw_buf_t * stencil_buffer = lv_draw_buf_create(layer_buf_width, layer_buf_height, LV_COLOR_FORMAT_A8, 0);
-    if(stencil_buffer == NULL) 
-    {
-        LV_LOG_ERROR("Failed to allocate memory for stencil buffer");
+    lv_result_t res = lv_draw_ambiq_stencil_buffer_adjust(unit, layer_buf_width, layer_buf_width);
+    if(res != LV_RESULT_OK) {
+        lv_free(sh_buf);
         return;
     }
 
     /* bind the stencil buffer to TEX1*/
-    nema_bind_tex(NEMA_TEX1, (uintptr_t)stencil_buffer->data, layer_buf_width, layer_buf_height, NEMA_A8, -1, NEMA_FILTER_PS);
+    nema_bind_tex(NEMA_TEX1, (uintptr_t)unit->stencil_buffer->data, unit->stencil_buffer->header.w, unit->stencil_buffer->header.h, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /* bind the blurred corner buffer to TEX2*/
     nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_buf, corner_size, corner_size, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /* set the blend mode to SRC*/
-    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
+    lv_ambiq_blend_mode_change(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
 
     nema_set_clip_temp(0 , 0 , layer_buf_width, layer_buf_height);
 
@@ -375,7 +373,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     }
 
     /* set the blend mode to SRC*/
-    lv_ambiq_change_blend_mode(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
+    lv_ambiq_blend_mode_change(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
     nema_set_raster_color(0xff000000);
 
     /*Draw the center rectangle.*/
@@ -439,7 +437,6 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     nema_cl_rewind(cl);
 
     lv_free(sh_buf);
-    lv_draw_buf_destroy(stencil_buffer);
 }
 
 /**********************

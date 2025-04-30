@@ -122,113 +122,48 @@ static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t
 {
     const lv_image_header_t * header = &draw_buf->header;
 
-    lv_area_t a_draw_buf;
-    a_draw_buf.x1 = 0;
-    a_draw_buf.y1 = 0;
-    a_draw_buf.x2 = draw_buf->header.w - 1;
-    a_draw_buf.y2 = draw_buf->header.h - 1;
-
     lv_area_t a_clipped;
-    if(a == NULL) {
-        a_clipped = a_draw_buf;
-    } else {
-        if(!lv_area_intersect(&a_clipped, a, &a_draw_buf)) return;
-    }
-
-    if(lv_area_get_width(&a_clipped) <= 0) return;
-    if(lv_area_get_height(&a_clipped) <= 0) return;
-
-
-
-    nema_cmdlist_t cl = nema_cl_create_sized(512);
-
-    lv_draw_ambiq_nema_context_lock();
-    nema_cl_bind(&cl);
-    nema_cl_rewind(&cl);
-
-    bool cl_need_submit = true;
-
-    nema_tex_format_t des_format = lv_ambiq_color_format_map_des(header->cf);
-    uint32_t palette_size = 0;
-    if(des_format != COLOR_FORMAT_INVALID) {
-
-        nema_bind_dst_tex((uintptr_t)draw_buf->data, header->w, header->h, des_format, header->stride);
-        nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
-        nema_set_raster_color(0x0);
-        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-
-    }
-    else if(header->cf == LV_COLOR_FORMAT_RGB565A8)
-    {
-        nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
-        nema_set_raster_color(0x0);
-
-        nema_bind_dst_tex((uintptr_t)draw_buf->data, header->w, header->h, NEMA_RGB565, -1);
-        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-
-        nema_bind_dst_tex((uintptr_t)draw_buf->data + header->w * header->h * 2, header->w, header->h, NEMA_A8, -1);
-        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-    }
-    else if(header->cf == LV_COLOR_FORMAT_I1 || header->cf == LV_COLOR_FORMAT_I2 || header->cf == LV_COLOR_FORMAT_I4 || header->cf == LV_COLOR_FORMAT_I8)
-    {
-        switch (header->cf)
-        {
-            case LV_COLOR_FORMAT_I1:
-                palette_size = 2;
-                des_format = NEMA_L1;
-                break;
-            case LV_COLOR_FORMAT_I2:
-                palette_size = 4;
-                des_format = NEMA_L2;
-                break;
-            case LV_COLOR_FORMAT_I4:
-                palette_size = 16;
-                des_format = NEMA_L4;
-                break;
-            case LV_COLOR_FORMAT_I8:
-                palette_size = 256;
-                des_format = NEMA_L8;
-                break;
-        }
-
-        if(a == NULL)
-        {
-            nema_bind_dst_tex((uintptr_t)draw_buf->data, palette_size, 1, NEMA_RGBA8888, -1);
-            nema_set_clip(0, 0, palette_size, 1);
-            lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
-            nema_set_raster_color(0x0);
-            nema_raster_rect(0, 0, palette_size, 1);
-        }
-
-        nema_bind_dst_tex((uintptr_t)draw_buf->data + palette_size * 4, header->w, header->h, des_format, -1);
-        nema_set_clip(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-        lv_ambiq_set_blend_fill(NULL, NEMA_BL_SRC);
-        nema_set_raster_color(0x0);
-        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
-    }
+    // If clip_area is NULL, we need to set the clip area to the whole screen.
+	lv_area_t buf_area = {0, 0, draw_buf->header.w - 1, draw_buf->header.h - 1};
+	if(a == NULL) {
+		a_clipped = buf_area;
+	}
     else
     {
-        LV_LOG_WARN("Unsupported color format");
-        cl_need_submit = false;
+        if(!lv_area_intersect(&a_clipped, a, &buf_area)) 
+        {
+            return LV_RESULT_INVALID;
+        }
     }
+
+    lv_result_t res = lv_draw_ambiq_common_start(draw_buf, a, true);
+    if(res != LV_RESULT_OK)
+        return;
+
+    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX0, NEMA_NOTEX, NEMA_NOTEX, false);
+    nema_set_raster_color(0x0);
+    nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
     
-    if(cl_need_submit) {
-        nema_cl_submit(&cl);
-    }
 
-    lv_draw_ambiq_nema_context_unlock();
-
-    uint32_t nema_error_code = nema_get_error();
-    if(nema_error_code != NEMA_ERR_NO_ERROR)
+    if(header->cf == LV_COLOR_FORMAT_RGB565A8)
     {
-        LV_LOG_ERROR("Nema error: 0x%08lX", nema_error_code);
+        nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_buf->data + header->w * header->h * 2, header->w, header->h, NEMA_A8, header->stride/2, 0);
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
+        nema_raster_rect(a_clipped.x1, a_clipped.y1, lv_area_get_width(&a_clipped), lv_area_get_height(&a_clipped));
+    }
+    else if((LV_COLOR_FORMAT_IS_INDEXED(header->cf)) && (a == NULL))
+    {
+        uint32_t palette_size = LV_COLOR_INDEXED_PALETTE_SIZE(header->cf);
+        nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_buf->data, palette_size, 1, NEMA_RGBA8888, -1, 0);
+        lv_area_t palette_area = {0, 0, palette_size - 1, 0};
+        lv_ambiq_clip_area_change(NULL, &palette_area, false);
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
+        nema_raster_rect(0, 0, palette_size, 1);
     }
 
-    nema_cl_wait(&cl);
+    
+    lv_draw_ambiq_common_end(true);
 
-    nema_cl_destroy(&cl);
 }
 
 static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * dest_area,
@@ -279,98 +214,42 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
     /*Check source and dest area have same width and hight*/
     LV_ASSERT_MSG(((line_width_src == line_width_dest) && (line_hight_src == line_hight_dest)), "Source and destination areas have different width and hight");
 
-    nema_cmdlist_t cl = nema_cl_create_sized(0x100);
-    LV_ASSERT_NULL(cl.bo.base_virt);
-    if(cl.bo.base_virt == NULL) return;
+    lv_result_t result = lv_draw_ambiq_common_start(dest, dest_area, true);
+    if(result != LV_RESULT_OK)
+    {
+        return;
+    }
 
-    lv_draw_ambiq_nema_context_lock();
-    nema_cl_bind(&cl);
-    nema_cl_rewind(&cl);
+    uint32_t palette_size = LV_COLOR_INDEXED_PALETTE_SIZE(src_header->cf);
+    nema_tex_format_t src_format = lv_ambiq_color_format_map_src(src_header->cf);
+    uintptr_t start_addr = (uintptr_t)(LV_COLOR_FORMAT_IS_INDEXED(src_header->cf) ? src->data + palette_size*4: src->data );
+    nema_bind_tex(NEMA_TEX1, (uintptr_t)start_addr, src_header->w, src_header->h, src_format, src_header->stride, NEMA_FILTER_PS);
+    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
+    nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
 
-    bool cl_need_submit = true;
-    nema_tex_format_t des_format = lv_ambiq_color_format_map_des(dest_header->cf);
-    uint32_t palette_size = 0;
-    if(des_format != COLOR_FORMAT_INVALID) {
 
-        nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, des_format, -1);
-        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
-        nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
-        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
+    if(dest_header->cf == LV_COLOR_FORMAT_RGB565A8)
+    {
+        nema_bind_tex(NEMA_TEX2, (uintptr_t)dest->data + dest_header->w * dest_header->h * 2, dest_header->w, dest_header->h, NEMA_A8, dest_header->stride/2, 0);
+        nema_bind_tex(NEMA_TEX1, (uintptr_t)src->data + src_header->w * src_header->h * 2, src_header->w, src_header->h, NEMA_A8, src_header->stride/2, NEMA_FILTER_PS);
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX2, NEMA_TEX1, NEMA_NOTEX, false);
         nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
     }
-    else if(dest_header->cf == LV_COLOR_FORMAT_RGB565A8)
+    else if((LV_COLOR_FORMAT_IS_INDEXED(dest_header->cf)) && (dest_area == NULL) && (src_area == NULL))
     {
-        nema_bind_dst_tex((uintptr_t)dest->data, dest_header->w, dest_header->h, NEMA_RGB565, -1);
-        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
-        nema_bind_src_tex((uintptr_t)src->data, src_header->w, src_header->h, NEMA_RGB565, -1, NEMA_FILTER_PS);
-        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
-        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
-
-        nema_bind_dst_tex((uintptr_t)dest->data + dest_header->w * dest_header->h * 2, dest_header->w, dest_header->h, NEMA_A8, -1);
-        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
-        nema_bind_src_tex((uintptr_t)src->data + src_header->w * src_header->h * 2, src_header->w, src_header->h, NEMA_A8, -1, NEMA_FILTER_PS);
-        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
-        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
-    }
-    else if(dest_header->cf == LV_COLOR_FORMAT_I1 || dest_header->cf == LV_COLOR_FORMAT_I2 || dest_header->cf == LV_COLOR_FORMAT_I4 || dest_header->cf == LV_COLOR_FORMAT_I8)
-    {
-        switch (dest_header->cf)
-        {
-            case LV_COLOR_FORMAT_I1:
-                palette_size = 2;
-                des_format = NEMA_L1;
-                break;
-            case LV_COLOR_FORMAT_I2:
-                palette_size = 4;
-                des_format = NEMA_L2;
-                break;
-            case LV_COLOR_FORMAT_I4:
-                palette_size = 16;
-                des_format = NEMA_L4;
-                break;
-            case LV_COLOR_FORMAT_I8:
-                palette_size = 256;
-                des_format = NEMA_L8;
-                break;
-        }
-
-        if(dest_area == NULL && src_area == NULL)
-        {
-            nema_bind_dst_tex((uintptr_t)dest->data, palette_size, 1, NEMA_RGBA8888, -1);
-            nema_set_clip(0, 0, palette_size, 1);
-            nema_bind_src_tex((uintptr_t)src->data, palette_size, 1, NEMA_RGBA8888, -1, NEMA_FILTER_PS);
-            lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
-            nema_blit(0, 0);
-        }
-
-        nema_bind_dst_tex((uintptr_t)dest->data + palette_size * 4, dest_header->w, dest_header->h, des_format, -1);
-        nema_set_clip(start_x_dest, start_y_dest, line_width_dest, line_hight_dest);
-        nema_bind_src_tex((uintptr_t)src->data + palette_size * 4, src_header->w, src_header->h, des_format, -1, NEMA_FILTER_PS);
-        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
-        nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_hight_src, start_x_src, start_y_src);
+        nema_bind_tex(NEMA_TEX2, (uintptr_t)dest->data, palette_size, 1, NEMA_BGRA8888, -1, 0);
+        lv_area_t palette_area = {0, 0, palette_size - 1, 0};
+        lv_ambiq_clip_area_change(NULL, &palette_area, false);
+        nema_bind_tex(NEMA_TEX1, (uintptr_t)src->data, palette_size, 1, NEMA_BGRA8888, -1, NEMA_FILTER_PS);
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX2, NEMA_TEX1, NEMA_NOTEX, false);
+        nema_blit(0, 0);
     }
     else
     {
-        LV_LOG_WARN("Unsupported color format");
-        cl_need_submit = false;
+        LV_ASSERT_MSG(false, "Should never come to this!");
     }
 
-    
-    if(cl_need_submit) {
-        nema_cl_submit(&cl);
-    }
-
-    lv_draw_ambiq_nema_context_unlock();
-
-    uint32_t nema_error_code = nema_get_error();
-    if(nema_error_code != NEMA_ERR_NO_ERROR)
-    {
-        LV_LOG_ERROR("Nema error: 0x%08lX", nema_error_code);
-    }
-
-    nema_cl_wait(&cl);
-
-    nema_cl_destroy(&cl);
+    lv_draw_ambiq_common_end(true);
 }
 
 static void* lv_draw_ambiq_buffer_malloc(size_t size, lv_color_format_t color_format)
