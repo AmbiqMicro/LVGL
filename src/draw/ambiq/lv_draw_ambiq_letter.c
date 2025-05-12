@@ -274,7 +274,13 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                         LV_LOG_WARN("CPU GPU sync required for unaligned bitmap, Slow down the performance!");
                         g->req_raw_bitmap = 0;
                         glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(glyph_draw_dsc->g, glyph_draw_dsc->_draw_buf);
-                        draw_raw_bitmap_internal(draw_ambiq_unit, glyph_draw_dsc->glyph_data, g->box_w, g->box_h,
+                        if (glyph_draw_dsc->glyph_data == NULL) {
+                            LV_LOG_WARN("Glyph data is NULL");
+                            break;
+                        }
+
+                        void* aligned_a8_bitmap = (void*)glyph_draw_dsc->_draw_buf->data;
+                        draw_raw_bitmap_internal(draw_ambiq_unit, aligned_a8_bitmap, g->box_w, g->box_h,
                             &raster_coords, LV_FONT_GLYPH_FORMAT_A8_ALIGNED, color, true); 
                         cpu_gpu_sync = true;  
                     }
