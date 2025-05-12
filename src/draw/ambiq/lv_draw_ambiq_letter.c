@@ -75,7 +75,7 @@ static bool is_width_aligned(uint32_t width, uint32_t format)
 static void draw_raw_bitmap_internal(lv_draw_ambiq_unit_t* unit, const void* bitmap, int32_t bitmap_w, int32_t bitmap_h, 
                                         lv_area_t* raster_area, 
                                         lv_font_glyph_format_t format, 
-                                        uint32_t color, bool aligned)
+                                        uint32_t color, bool aligned, bool extend_width)
 {
     nema_tex_format_t nema_format;
 
@@ -113,6 +113,9 @@ static void draw_raw_bitmap_internal(lv_draw_ambiq_unit_t* unit, const void* bit
     nema_mat3x3_load_identity(m);
 
     if (aligned) {
+        if(extend_width && ((bitmap_w % 2) == 0))
+            bitmap_w += 2;
+
         nema_bind_src_tex((uintptr_t)bitmap, bitmap_w, bitmap_h, nema_format, -1, NEMA_FILTER_PS);
         nema_mat3x3_translate(m, -raster_area->x1, -raster_area->y1);
     } else {
@@ -237,12 +240,16 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 
                     bool is_within_nema_coord_limit = ((g->box_h * g->box_w) <= NEMA_COORD_LIMIT) ? true : false;
                     bool is_aligned;
+                    bool extend_width;
                     if (fdsc->bitmap_format == LV_FONT_FMT_PLAIN_ALIGNED) {
                         is_aligned = true;
+                        extend_width = true;
                     } else if (is_width_aligned(g->box_w, g->format)) {
                         is_aligned = true;
+                        extend_width = false;
                     } else {
                         is_aligned = false;
+                        extend_width = false;
                     }
 
                     bool is_plain = false;
@@ -260,14 +267,14 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                         g->req_raw_bitmap = 1;
                         glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(g, NULL); 
                         draw_raw_bitmap_internal(draw_ambiq_unit, glyph_draw_dsc->glyph_data, g->box_w, g->box_h,
-                                &raster_coords, g->format, color, true);   
+                                &raster_coords, g->format, color, true, extend_width);   
                     }
                     else if(is_plain && is_within_nema_coord_limit)
                     {
                         g->req_raw_bitmap = 1;
                         glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(g, NULL); 
                         draw_raw_bitmap_internal(draw_ambiq_unit, glyph_draw_dsc->glyph_data, g->box_w, g->box_h,
-                                &raster_coords, g->format, color, false);   
+                                &raster_coords, g->format, color, false, false);   
                     }
                     else
                     {
@@ -281,7 +288,7 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 
                         void* aligned_a8_bitmap = (void*)glyph_draw_dsc->_draw_buf->data;
                         draw_raw_bitmap_internal(draw_ambiq_unit, aligned_a8_bitmap, g->box_w, g->box_h,
-                            &raster_coords, LV_FONT_GLYPH_FORMAT_A8_ALIGNED, color, true); 
+                            &raster_coords, LV_FONT_GLYPH_FORMAT_A8, color, true, false); 
                         cpu_gpu_sync = true;  
                     }
                     break;
