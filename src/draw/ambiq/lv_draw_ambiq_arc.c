@@ -154,10 +154,10 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
     }
 
     // make end_angle in [start_angle, 720]
-    end_angle = fmod(end_angle, 720.f);
+    end_angle = fmod(end_angle, 360.f);
     if(end_angle < 0)
     {
-        end_angle += 720.f;
+        end_angle += 360.f;
     }
     if(end_angle <= start_angle)
     {
@@ -166,6 +166,13 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
 
     lv_layer_t * layer = t->target_layer;
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
+
+    bool is_full_circle = false;
+    if(end_angle - start_angle > 359.9f && end_angle - start_angle < 360.1f)
+    {
+        is_full_circle = true;
+        nema_set_clip_temp(coords->x1 - layer->buf_area.x1 , coords->y1 - layer->buf_area.y1, lv_area_get_width(coords), lv_area_get_height(coords));
+    }
 
     uint32_t blending_mode;
 
@@ -279,6 +286,11 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
         nema_cl_rewind(cl);
 
         lv_image_decoder_close(&decoder_dsc);
+    }
+
+    if(is_full_circle)
+    {
+        nema_set_clip_pop();
     }
 
     return;
