@@ -135,6 +135,17 @@ nema_tex_format_t lv_ambiq_color_format_map_src(lv_color_format_t lvgl_cf)
         case LV_COLOR_FORMAT_XRGB8888:
             return NEMA_BGRX8888;
 
+        case LV_COLOR_FORMAT_NEMA_TSC4:
+            return NEMA_TSC4;
+        case LV_COLOR_FORMAT_NEMA_TSC6:
+            return NEMA_TSC6;
+        case LV_COLOR_FORMAT_NEMA_TSC6A:
+            return NEMA_TSC6A;
+        case LV_COLOR_FORMAT_NEMA_TSC12:
+            return NEMA_TSC12;
+        case LV_COLOR_FORMAT_NEMA_TSC12A:
+            return NEMA_TSC12A;
+
         default:
             return COLOR_FORMAT_INVALID;
     }
