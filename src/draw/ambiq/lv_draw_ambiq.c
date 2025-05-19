@@ -369,6 +369,30 @@ static void execute_drawing(lv_draw_task_t * t)
 
     lv_area_t draw_area;
     lv_area_copy(&draw_area, &t->area);
+
+    if(t->type == LV_DRAW_TASK_TYPE_IMAGE) {
+        lv_draw_image_dsc_t * draw_dsc = t->draw_dsc;
+
+        bool transformed = draw_dsc->rotation != 0 || draw_dsc->scale_x != LV_SCALE_NONE ||
+                       draw_dsc->scale_y != LV_SCALE_NONE || draw_dsc->skew_y != 0 || draw_dsc->skew_x != 0 ? true : false;
+
+
+        if(transformed) {
+            int32_t w = lv_area_get_width(&draw_area);
+            int32_t h = lv_area_get_height(&draw_area);
+
+            lv_image_buf_get_transformed_area(&draw_area, w, h, 
+                                              draw_dsc->rotation, 
+                                              draw_dsc->scale_x, draw_dsc->scale_y,
+                                              &draw_dsc->pivot);
+
+            draw_area.x1 += t->area.x1;
+            draw_area.y1 += t->area.y1;
+            draw_area.x2 += t->area.x1;
+            draw_area.y2 += t->area.y1;
+        }
+    }
+
     lv_area_move(&draw_area, -layer->buf_area.x1, -layer->buf_area.y1);
 
     if(!lv_area_intersect(&draw_area, &draw_area, &clip_area))
