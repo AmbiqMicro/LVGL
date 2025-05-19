@@ -162,28 +162,7 @@ void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
         }
     }
 
-        lv_area_t draw_area;
-        lv_area_copy(&draw_area, coords);
-        if(transformed) {
-            int32_t w = lv_area_get_width(coords);
-            int32_t h = lv_area_get_height(coords);
 
-            lv_image_buf_get_transformed_area(&draw_area, w, h, 
-                                              draw_dsc->rotation, 
-                                              draw_dsc->scale_x, draw_dsc->scale_y,
-                                              &draw_dsc->pivot);
-
-            draw_area.x1 += coords->x1;
-            draw_area.y1 += coords->y1;
-            draw_area.x2 += coords->x1;
-            draw_area.y2 += coords->y1;
-        }
-
-        lv_area_t clipped_img_area;
-        if(!lv_area_intersect(&clipped_img_area, &draw_area, &t->clip_area)) {
-            lv_image_decoder_close(&decoder_dsc);
-            return;
-        }
 
         // TODO: compare the draw_area min and max value with coordinate range limitation.
 
