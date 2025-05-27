@@ -276,7 +276,7 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
             x_arc = (float)(coords->x1 + rout - draw_buf_offset_x);
-            y_arc = (float)(coords->y2 - rout - draw_buf_offset_y); 
+            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y); 
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 90.f, 180.f);
@@ -309,8 +309,8 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
                                clip_intersect.x2 - clip_intersect.x1 + 1, 
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
-            x_arc = (float)(coords->x2 - rout - draw_buf_offset_x);
-            y_arc = (float)(coords->y2 - rout - draw_buf_offset_y); 
+            x_arc = (float)(coords->x2 - rout + 1 - draw_buf_offset_x);
+            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y); 
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 0.f, 90.f);
@@ -343,7 +343,7 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
                                clip_intersect.x2 - clip_intersect.x1 + 1, 
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
-            x_arc = (float)(coords->x2 - rout - draw_buf_offset_x);
+            x_arc = (float)(coords->x2 - rout + 1 - draw_buf_offset_x);
             y_arc = (float)(coords->y1 + rout - draw_buf_offset_y); 
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);

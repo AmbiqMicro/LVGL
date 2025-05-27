@@ -103,6 +103,13 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
         colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;               
     }
 
+    // handle AA
+    //Previous AA setting.
+    uint32_t prev_aa = 0xFFFFFFFF;
+
+    //Set antialias
+    prev_aa = nema_enable_aa(true, true, true, false);
+
     nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_ambiq_unit->small_texture_buffer->data,
                   draw_ambiq_unit->small_texture_buffer->header.w,
                   1,
@@ -135,6 +142,8 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
     nema_set_matrix_all(m);
 
     nema_raster_triangle_f(p0_x, p0_y, p1_x, p1_y, p2_x, p2_y);
+
+    nema_enable_aa_flags(prev_aa);
 
     return;
 }
