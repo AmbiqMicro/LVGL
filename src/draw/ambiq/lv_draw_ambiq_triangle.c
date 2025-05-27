@@ -62,6 +62,12 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
     float p2_x = (float)(dsc->p[2].x - layer->buf_area.x1);
     float p2_y = (float)(dsc->p[2].y - layer->buf_area.y1);
 
+    // handle AA
+    //Previous AA setting.
+    uint32_t prev_aa = 0xFFFFFFFF;
+
+    //Set antialias
+    prev_aa = nema_enable_aa(true, true, true, false);
 
     uint32_t blending_mode;
 
@@ -102,13 +108,6 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
         colors[i].b = (float)dsc->grad.stops[i].color.blue;   
         colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;               
     }
-
-    // handle AA
-    //Previous AA setting.
-    uint32_t prev_aa = 0xFFFFFFFF;
-
-    //Set antialias
-    prev_aa = nema_enable_aa(true, true, true, false);
 
     nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_ambiq_unit->small_texture_buffer->data,
                   draw_ambiq_unit->small_texture_buffer->header.w,
