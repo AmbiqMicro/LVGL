@@ -146,12 +146,11 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
     // In NemaSDK, the radius_out= radius+width*0.5, radius_in=radius-width*0.5;
     radius_f -= width_f * 0.5f;
 
-    //Draw the arc
-    nema_raster_stroked_arc_aa(center_x, center_y, radius_f, width_f, start_angle, end_angle);
-
     //Draw rounded ending
     if(dsc->rounded)
     {
+        //Draw the arc
+        nema_raster_stroked_arc_aa(center_x, center_y, radius_f, width_f, start_angle, end_angle);
         float width_cir = width_f * 0.5f;
         float start_cir_x = center_x + radius_f * nema_cos(start_angle);
         float start_cir_y = center_y + radius_f * nema_sin(start_angle);
@@ -160,6 +159,11 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
 
         nema_raster_stroked_arc_aa(start_cir_x, start_cir_y, width_cir * 0.5f, width_cir, start_angle + 180.f, start_angle + 360.f);
         nema_raster_stroked_arc_aa(end_cir_x, end_cir_y, width_cir * 0.5f, width_cir, end_angle, end_angle + 180.f);
+    }
+    else
+    {
+        //Draw the arc
+        nema_raster_stroked_arc_aa_mask(center_x, center_y, radius_f, width_f, start_angle, end_angle, 0x04000000U|0x01000000U);
     }
 
     if (bg_img)
