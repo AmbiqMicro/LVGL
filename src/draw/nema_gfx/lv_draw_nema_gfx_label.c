@@ -90,9 +90,31 @@ static uint8_t hex_char_to_num(char hex);
 
 static bool is_raw_bitmap;
 
+#if LV_USE_FREETYPE && LV_USE_NEMA_VG
+
+    #include "lv_nema_gfx_path.h"
+
+    static void _draw_nema_gfx_outline(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
+
+    static void freetype_outline_event_cb(lv_event_t * e);
+
+    static void lv_nema_gfx_outline_push(const lv_freetype_outline_event_param_t * param);
+
+    static void lv_nema_outline_event_alloc(const lv_freetype_outline_event_param_t * param);
+#endif
+
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+void lv_draw_nema_gfx_label_init(lv_draw_unit_t * draw_unit)
+{
+#if LV_USE_FREETYPE
+    /*Set up the freetype outline event*/
+    lv_freetype_outline_add_event(freetype_outline_event_cb, LV_EVENT_ALL, draw_unit);
+#else
+    LV_UNUSED(draw_unit);
+#endif /* LV_USE_FREETYPE */
+}
 
 void lv_draw_nema_gfx_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords)
 {
@@ -125,8 +147,130 @@ void lv_draw_nema_gfx_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc,
 /**********************
  *   STATIC FUNCTIONS
  **********************/
+#if LV_USE_FREETYPE && LV_USE_NEMA_VG
 
+static void _draw_nema_gfx_outline(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc)
+{
 
+    lv_area_t blend_area;
+    if(!_lv_area_intersect(&blend_area, glyph_draw_dsc->letter_coords, &t->clip_area))
+        return;
+
+    lv_draw_nema_gfx_unit_t * draw_nema_gfx_unit = (lv_draw_nema_gfx_unit_t *)t->draw_unit;
+
+    lv_nema_gfx_path_t * nema_gfx_path = (lv_nema_gfx_path_t *)glyph_draw_dsc->glyph_data;
+
+    lv_point_t pos = {glyph_draw_dsc->letter_coords->x1, glyph_draw_dsc->letter_coords->y1};
+
+    float scale = FT_F26DOT6_TO_PATH_SCALE(lv_freetype_outline_get_scale(glyph_draw_dsc->g->resolved_font));
+
+    /*Calculate Path Matrix*/
+    nema_matrix3x3_t matrix;
+    nema_mat3x3_load_identity(matrix);
+    nema_mat3x3_scale(matrix, scale, -scale);
+    nema_mat3x3_translate(matrix, pos.x - glyph_draw_dsc->g->ofs_x,
+                          pos.y + glyph_draw_dsc->g->box_h + glyph_draw_dsc->g->ofs_y);
+
+    nema_vg_path_clear(nema_gfx_path->path);
+    nema_vg_paint_clear(nema_gfx_path->paint);
+
+    nema_vg_set_fill_rule(NEMA_VG_FILL_EVEN_ODD);
+
+    nema_vg_path_set_shape(nema_gfx_path->path, nema_gfx_path->seg_size, nema_gfx_path->seg, nema_gfx_path->data_size,
+                           nema_gfx_path->data);
+
+    nema_vg_paint_set_type(nema_gfx_path->paint, NEMA_VG_PAINT_COLOR);
+
+    lv_color32_t dsc_col32 = lv_color_to_32(glyph_draw_dsc->color, glyph_draw_dsc->opa);
+    uint32_t nema_dsc_color = nema_rgba(dsc_col32.red, dsc_col32.green, dsc_col32.blue, dsc_col32.alpha);
+
+    nema_vg_paint_set_paint_color(nema_gfx_path->paint, nema_dsc_color);
+
+    nema_vg_path_set_matrix(nema_gfx_path->path, matrix);
+    nema_vg_draw_path(nema_gfx_path->path, nema_gfx_path->paint);
+
+    return;
+}
+
+static void freetype_outline_event_cb(lv_event_t * e)
+{
+    LV_PROFILER_DRAW_BEGIN;
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_freetype_outline_event_param_t * param = lv_event_get_param(e);
+
+    switch(code) {
+        case LV_EVENT_CREATE:
+            param->outline = lv_nema_gfx_path_create();
+            lv_nema_outline_event_alloc(param);
+            break;
+        case LV_EVENT_DELETE:
+            lv_nema_gfx_path_destroy(param->outline);
+            break;
+        case LV_EVENT_INSERT:
+            lv_nema_gfx_outline_push(param);
+            break;
+        default:
+            LV_LOG_WARN("unknown event code: %d", code);
+            break;
+    }
+    LV_PROFILER_DRAW_END;
+}
+
+static void lv_nema_gfx_outline_push(const lv_freetype_outline_event_param_t * param)
+{
+    LV_PROFILER_DRAW_BEGIN;
+    lv_nema_gfx_path_t * outline = param->outline;
+    LV_ASSERT_NULL(outline);
+
+    lv_freetype_outline_type_t type = param->type;
+    switch(type) {
+        case LV_FREETYPE_OUTLINE_END:
+            lv_nema_gfx_path_end(outline);
+            break;
+        case LV_FREETYPE_OUTLINE_MOVE_TO:
+            lv_nema_gfx_path_move_to(outline, param->to.x, param->to.y);
+            break;
+        case LV_FREETYPE_OUTLINE_LINE_TO:
+            lv_nema_gfx_path_line_to(outline, param->to.x, param->to.y);
+            break;
+        case LV_FREETYPE_OUTLINE_CUBIC_TO:
+            lv_nema_gfx_path_cubic_to(outline, param->control1.x, param->control1.y,
+                                      param->control2.x, param->control2.y,
+                                      param->to.x, param->to.y);
+            break;
+        case LV_FREETYPE_OUTLINE_CONIC_TO:
+            lv_nema_gfx_path_quad_to(outline, param->control1.x, param->control1.y,
+                                     param->to.x, param->to.y);
+            break;
+        default:
+            LV_LOG_ERROR("unknown point type: %d", type);
+            LV_ASSERT(false);
+            break;
+    }
+    LV_PROFILER_DRAW_END;
+}
+
+static void lv_nema_outline_event_alloc(const lv_freetype_outline_event_param_t * param)
+{
+    lv_nema_gfx_path_t * outline = param->outline;
+    outline->data_size = param->sizes.data_size;
+    outline->seg_size = param->sizes.segments_size;
+    lv_nema_gfx_path_alloc(outline);
+}
+
+#endif /* LV_USE_FREETYPE && LV_USE_NEMA_VG */
+
+/**
+ * Convert a hexadecimal characters to a number (0..15)
+ * @param hex Pointer to a hexadecimal character (0..9, A..F)
+ * @return the numerical value of `hex` or 0 on error
+ */
+static uint8_t hex_char_to_num(char hex)
+{
+    if(hex >= '0' && hex <= '9') return hex - '0';
+    if(hex >= 'a') hex -= 'a' - 'A'; /*Convert to upper case*/
+    return 'A' <= hex && hex <= 'F' ? hex - 'A' + 10 : 0;
+}
 
 
 static inline uint8_t _bpp_nema_gfx_format(lv_draw_glyph_dsc_t * glyph_draw_dsc)
@@ -395,8 +539,6 @@ static void _draw_label_iterate_characters(lv_draw_task_t * t, const lv_draw_lab
     lv_color_t recolor = lv_color_black(); /* Holds the selected color inside the recolor command */
     uint8_t is_first_space_after_cmd = 0;
 
-
-    /***************************************************/
     lv_color32_t dsc_col32 = lv_color_to_32(dsc->color, dsc->opa);
     uint32_t nema_dsc_color = nema_rgba(dsc_col32.red, dsc_col32.green, dsc_col32.blue, dsc_col32.alpha);
     lv_color32_t dsc_sel_col32 = lv_color_to_32(dsc->sel_color, dsc->opa);
@@ -409,8 +551,6 @@ static void _draw_label_iterate_characters(lv_draw_task_t * t, const lv_draw_lab
 
     uint8_t cur_state = 2;
     uint8_t prev_state = 2;
-   /***************************************************/
-
 
     /*Write out all lines*/
     while(remaining_len && dsc->text[line_start] != '\0') {
@@ -623,18 +763,6 @@ static void _draw_label_iterate_characters(lv_draw_task_t * t, const lv_draw_lab
     if(draw_letter_dsc._draw_buf) lv_draw_buf_destroy(draw_letter_dsc._draw_buf);
 
     LV_ASSERT_MEM_INTEGRITY();
-}
-
-/**
- * Convert a hexadecimal characters to a number (0..15)
- * @param hex Pointer to a hexadecimal character (0..9, A..F)
- * @return the numerical value of `hex` or 0 on error
- */
-static uint8_t hex_char_to_num(char hex)
-{
-    if(hex >= '0' && hex <= '9') return hex - '0';
-    if(hex >= 'a') hex -= 'a' - 'A'; /*Convert to upper case*/
-    return 'A' <= hex && hex <= 'F' ? hex - 'A' + 10 : 0;
 }
 
 static void _draw_letter(lv_draw_task_t * t, lv_draw_glyph_dsc_t * dsc,  const lv_point_t * pos,
