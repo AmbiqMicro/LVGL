@@ -38,9 +38,8 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static void shadow_draw_corner_buf(const lv_area_t * coords, uint16_t * sh_buf, int32_t s,
+static void shadow_draw_corner_buf(const lv_area_t * coords, lv_opa_t * sh_buf, int32_t s,
                                                                int32_t r);
-static void LV_ATTRIBUTE_FAST_MEM shadow_blur_corner(int32_t size, int32_t sw, uint16_t * sh_ups_buf);
 
 /**********************
  *  STATIC VARIABLES
@@ -108,9 +107,9 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     lv_opa_t * sh_buf;
 
 
-    sh_buf = lv_malloc(corner_size * corner_size * sizeof(uint16_t));
+    sh_buf = lv_malloc(corner_size * corner_size);
     LV_ASSERT_MALLOC(sh_buf);
-    shadow_draw_corner_buf(&core_area, (uint16_t *)sh_buf, dsc->width, r_sh);
+    shadow_draw_corner_buf(&core_area, (lv_opa_t *)sh_buf, dsc->width, r_sh);
 
     /*Skip a lot of masking if the background will cover the shadow that would be masked out*/
     bool simple = dsc->bg_cover;
@@ -450,7 +449,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
  * @param sw shadow width
  * @param r radius
  */
-static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coords, uint16_t * sh_buf, int32_t sw,
+static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coords, lv_opa_t * sh_buf, int32_t sw,
                                                          int32_t r)
 {
     int32_t sw_ori = sw;
@@ -476,7 +475,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     int32_t y;
     lv_opa_t * mask_line = lv_malloc(size);
     LV_ASSERT_MALLOC(mask_line);
-    uint16_t * sh_ups_tmp_buf = (uint16_t *)sh_buf;
+    lv_opa_t * sh_ups_tmp_buf = (lv_opa_t *)sh_buf;
     for(y = 0; y < size; y++) {
         lv_memset(mask_line, 0xff, size);
         lv_draw_sw_mask_res_t mask_res = mask_param.dsc.cb(mask_line, 0, y, size, &mask_param);
@@ -484,12 +483,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
             lv_memzero(sh_ups_tmp_buf, size * sizeof(sh_ups_tmp_buf[0]));
         }
         else {
-            int32_t i;
-            sh_ups_tmp_buf[0] = (mask_line[0] << SHADOW_UPSCALE_SHIFT) / sw;
-            for(i = 1; i < size; i++) {
-                if(mask_line[i] == mask_line[i - 1]) sh_ups_tmp_buf[i] = sh_ups_tmp_buf[i - 1];
-                else  sh_ups_tmp_buf[i] = (mask_line[i] << SHADOW_UPSCALE_SHIFT) / sw;
-            }
+            lv_memcpy(sh_ups_tmp_buf, mask_line, size);
         }
 
         sh_ups_tmp_buf += size;
@@ -499,118 +493,40 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     lv_draw_sw_mask_free_param(&mask_param);
 
     if(sw == 1) {
-        int32_t i;
-        lv_opa_t * res_buf = (lv_opa_t *)sh_buf;
-        for(i = 0; i < size * size; i++) {
-            res_buf[i] = (sh_buf[i] >> SHADOW_UPSCALE_SHIFT);
-        }
         return;
     }
 
-    shadow_blur_corner(size, sw, sh_buf);
+    /*Create a temporary buff for calculating shadows*/ 
+    lv_draw_buf_t * sh_ups_blur_buf = lv_draw_buf_create(size + sw, size + sw, LV_COLOR_FORMAT_A8, 0);
 
-#if SHADOW_ENHANCE == 0
-    /*The result is required in lv_opa_t not uint16_t*/
-    uint32_t x;
-    lv_opa_t * res_buf = (lv_opa_t *)sh_buf;
-    for(x = 0; x < size * size; x++) {
-        res_buf[x] = sh_buf[x];
-    }
-#else
+    /*Bind src tex*/
+    nema_bind_tex(NEMA_TEX1, (uintptr_t)sh_buf, size, size, NEMA_A8, -1, NEMA_FILTER_PS);
+
+    /*Bind tmp tex*/
+    nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_ups_blur_buf->data, size + sw, size + sw, NEMA_A8, -1, NEMA_FILTER_PS);
+
+    lv_ambiq_shadow_blur_corner(size, sw, NEMA_TEX1, NEMA_TEX2);
+
+#if SHADOW_ENHANCE
     sw += sw_ori & 1;
     if(sw > 1) {
-        uint32_t i;
-        uint32_t max_v_div = (LV_OPA_COVER << SHADOW_UPSCALE_SHIFT) / sw;
-        for(i = 0; i < (uint32_t)size * size; i++) {
-            if(sh_buf[i] == 0) continue;
-            else if(sh_buf[i] == LV_OPA_COVER) sh_buf[i] = max_v_div;
-            else  sh_buf[i] = (sh_buf[i] << SHADOW_UPSCALE_SHIFT) / sw;
-        }
-
-        shadow_blur_corner(size, sw, sh_buf);
-    }
-    int32_t x;
-    lv_opa_t * res_buf = (lv_opa_t *)sh_buf;
-    for(x = 0; x < size * size; x++) {
-        res_buf[x] = (lv_opa_t) sh_buf[x];
+        lv_ambiq_shadow_blur_corner(size, sw, NEMA_TEX1, NEMA_TEX2);
     }
 #endif
 
+    /*Run this GPU rendering before destroying the temporary buffer.*/
+    nema_cmdlist_t * cl = nema_cl_get_bound();
+    nema_cl_submit(cl);
+    nema_cl_wait(cl);
+    nema_cl_rewind(cl);
+
+    /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
+     *At this point, the blend mode must be updated to any valid state (or restore the previous one)
+     *to maintain correct global rendering behavior.*/
+    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
+
+    /*Destroy temp buffer*/
+    lv_draw_buf_destroy(sh_ups_blur_buf);
 }
-
-static void LV_ATTRIBUTE_FAST_MEM shadow_blur_corner(int32_t size, int32_t sw, uint16_t * sh_ups_buf)
-{
-    int32_t s_left = sw >> 1;
-    int32_t s_right = (sw >> 1);
-    if((sw & 1) == 0) s_left--;
-
-    /*Horizontal blur*/
-    uint16_t * sh_ups_blur_buf = lv_malloc(size * sizeof(uint16_t));
-    LV_ASSERT_MALLOC(sh_ups_blur_buf);
-
-    int32_t x;
-    int32_t y;
-
-    uint16_t * sh_ups_tmp_buf = sh_ups_buf;
-
-    for(y = 0; y < size; y++) {
-        int32_t v = sh_ups_tmp_buf[size - 1] * sw;
-        for(x = size - 1; x >= 0; x--) {
-            sh_ups_blur_buf[x] = v;
-
-            /*Forget the right pixel*/
-            uint32_t right_val = 0;
-            if(x + s_right < size) right_val = sh_ups_tmp_buf[x + s_right];
-            v -= right_val;
-
-            /*Add the left pixel*/
-            uint32_t left_val;
-            if(x - s_left - 1 < 0) left_val = sh_ups_tmp_buf[0];
-            else left_val = sh_ups_tmp_buf[x - s_left - 1];
-            v += left_val;
-        }
-        lv_memcpy(sh_ups_tmp_buf, sh_ups_blur_buf, size * sizeof(uint16_t));
-        sh_ups_tmp_buf += size;
-    }
-
-    /*Vertical blur*/
-    uint32_t i;
-    uint32_t max_v = LV_OPA_COVER << SHADOW_UPSCALE_SHIFT;
-    uint32_t max_v_div = max_v / sw;
-    for(i = 0; i < (uint32_t)size * size; i++) {
-        if(sh_ups_buf[i] == 0) continue;
-        else if(sh_ups_buf[i] == max_v) sh_ups_buf[i] = max_v_div;
-        else sh_ups_buf[i] = sh_ups_buf[i] / sw;
-    }
-
-    for(x = 0; x < size; x++) {
-        sh_ups_tmp_buf = &sh_ups_buf[x];
-        int32_t v = sh_ups_tmp_buf[0] * sw;
-        for(y = 0; y < size ; y++, sh_ups_tmp_buf += size) {
-            sh_ups_blur_buf[y] = v < 0 ? 0 : (v >> SHADOW_UPSCALE_SHIFT);
-
-            /*Forget the top pixel*/
-            uint32_t top_val;
-            if(y - s_right <= 0) top_val = sh_ups_tmp_buf[0];
-            else top_val = sh_ups_buf[(y - s_right) * size + x];
-            v -= top_val;
-
-            /*Add the bottom pixel*/
-            uint32_t bottom_val;
-            if(y + s_left + 1 < size) bottom_val = sh_ups_buf[(y + s_left + 1) * size + x];
-            else bottom_val = sh_ups_buf[(size - 1) * size + x];
-            v += bottom_val;
-        }
-
-        /*Write back the result into `sh_ups_buf`*/
-        sh_ups_tmp_buf = &sh_ups_buf[x];
-        for(y = 0; y < size; y++, sh_ups_tmp_buf += size) {
-            (*sh_ups_tmp_buf) = sh_ups_blur_buf[y];
-        }
-    }
-
-    lv_free(sh_ups_blur_buf);
-}
-
 
 #endif /*LV_USE_DRAW_AMBIQ*/
