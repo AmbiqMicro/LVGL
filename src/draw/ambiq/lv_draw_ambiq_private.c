@@ -495,7 +495,7 @@ lv_result_t lv_draw_ambiq_stencil_buffer_adjust(lv_draw_ambiq_unit_t* unit,
 
 lv_result_t lv_draw_ambiq_vg_start(uint32_t width, uint32_t hight)
 {
-#if LV_USE_DRAW_AMBIQ_VG
+#if LV_USE_AMBIQ_VG
 	lv_draw_ambiq_unit_t* unit = lv_draw_ambiq_get_default_unit();
 		nema_vg_path_clear(unit->vg_path);
 		nema_vg_paint_clear(unit->vg_paint);

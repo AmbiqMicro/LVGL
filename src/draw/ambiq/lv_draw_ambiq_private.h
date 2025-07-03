@@ -51,7 +51,7 @@ extern "C" {
 #include "nema_matrix3x3.h"
 #include "nema_programHW.h"
 
-#if LV_USE_DRAW_AMBIQ_VG
+#if LV_USE_AMBIQ_VG
 #include "nema_vg.h"
 #include "nema_vg_paint.h"
 #include "nema_vg_path.h"
@@ -87,7 +87,7 @@ typedef struct {
     //! stencil buffer for VG and other widgets
     lv_draw_buf_t* stencil_buffer;
 
-#if LV_USE_DRAW_AMBIQ_VG
+#if LV_USE_AMBIQ_VG
 
     //! VG path handle
     NEMA_VG_PATH_HANDLE  vg_path;
@@ -168,6 +168,9 @@ lv_result_t lv_draw_ambiq_stencil_buffer_adjust(lv_draw_ambiq_unit_t* unit, uint
 lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t *buf_dsc, const lv_area_t *clip_area_raw, bool extend_color_format_support);
 lv_result_t lv_draw_ambiq_common_end(bool sync);
 lv_result_t lv_draw_ambiq_vg_start(uint32_t width, uint32_t hight);
+
+void lv_draw_ambiq_vector_font_init(lv_draw_unit_t * draw_unit);
+void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
 
 /***********************
  * GLOBAL VARIABLES

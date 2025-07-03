@@ -69,7 +69,7 @@ void lv_draw_ambiq_init(void)
     draw_ambiq_unit->base_unit.name = "AMBIQ";
     draw_ambiq_unit->small_texture_buffer  = lv_draw_buf_create(64, 1, LV_COLOR_FORMAT_ARGB8888, 0);
     draw_ambiq_unit->stencil_buffer = NULL;
-#if LV_USE_VECTOR_GRAPHIC
+#if LV_USE_AMBIQ_VG
     draw_ambiq_unit->vg_path = nema_vg_path_create();
     draw_ambiq_unit->vg_paint = nema_vg_paint_create();
     draw_ambiq_unit->vg_grad = nema_vg_grad_create();
@@ -89,6 +89,10 @@ void lv_draw_ambiq_init(void)
 //    lv_ll_init(&draw_ambiq_unit->inserted_cl_ll, sizeof(nema_cmdlist_t));
 
     draw_ambiq_unit->nema_context_lock_count = 0;
+
+#ifdef LV_USE_AMBIQ_VG
+    lv_draw_ambiq_vector_font_init(draw_ambiq_unit);
+#endif
 
 #if LV_USE_OS
     lv_mutex_init(&draw_ambiq_unit->mutex_nema_context);
@@ -116,7 +120,7 @@ void lv_draw_ambiq_deinit(void)
     //     return ;   
     // }
 
-#if LV_USE_DRAW_AMBIQ_VG
+#if LV_USE_AMBIQ_VG
     //This will release the internal buffer in NemaVG.
     nema_vg_deinit();
 #endif
@@ -274,7 +278,7 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             break;
 
         case LV_DRAW_TASK_TYPE_VECTOR:
-#if LV_USE_DRAW_AMBIQ_VG
+#if LV_USE_AMBIQ_VG
             task->preference_score = 10;
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
 #else
@@ -398,8 +402,10 @@ static void execute_drawing(lv_draw_task_t * t)
     if(!lv_area_intersect(&draw_area, &draw_area, &clip_area))
         return; /*Fully clipped, nothing to do*/
 
+    /* If GPU and CPU work in async mode, software rendering pipeline will not be used, 
+    draw buffer will only be accessed by GPU, no cache flush is needed. */
+#if LV_AMBIQ_CPU_GPU_ASYNC==0 
     /* Flush the drawing area */
-#if LV_DRAW_AMBIQ_ASYNC
     lv_draw_buf_flush_cache(draw_buf, &draw_area);
 #endif
 
@@ -428,6 +434,7 @@ static void execute_drawing(lv_draw_task_t * t)
             lv_draw_ambiq_image(t, t->draw_dsc, &t->area);
             break; 
         case LV_DRAW_TASK_TYPE_LABEL:
+            lv_draw_ambiq_vg_start(draw_buf->header.w, draw_buf->header.h);
             lv_draw_ambiq_label(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_LETTER:
@@ -444,15 +451,17 @@ static void execute_drawing(lv_draw_task_t * t)
             lv_draw_ambiq_layer(t, t->draw_dsc, &t->area);
             break;
         case LV_DRAW_TASK_TYPE_VECTOR:
+#if LV_USE_VECTOR_GRAPHIC
             lv_draw_ambiq_vg_start(draw_buf->header.w, draw_buf->header.h);
             lv_draw_ambiq_vector(t, t->draw_dsc);
+#endif
             break;
 
         default:
             break;
     }
 
-#if LV_DRAW_AMBIQ_ASYNC
+#if LV_AMBIQ_CPU_GPU_ASYNC
     lv_draw_ambiq_common_end(false);
 #else
     lv_draw_ambiq_common_end(true);
