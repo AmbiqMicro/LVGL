@@ -13,8 +13,8 @@
 
 #if LV_USE_DRAW_AMBIQ && LV_USE_VECTOR_GRAPHIC
 
-#if LV_USE_DRAW_AMBIQ_VG==0
-#error "LV_USE_VECTOR_GRAPHIC requires LV_USE_DRAW_AMBIQ_VG 1"
+#if LV_USE_AMBIQ_VG==0
+#error "LV_USE_VECTOR_GRAPHIC requires LV_USE_AMBIQ_VG 1"
 #endif
 
 #include "lv_draw_ambiq_private.h"

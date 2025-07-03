@@ -52,6 +52,18 @@ static void /* LV_ATTRIBUTE_FAST_MEM */ draw_letter_cb(lv_draw_task_t * t, lv_dr
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+void lv_draw_ambiq_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords)
+{
+    if(dsc->opa <= LV_OPA_MIN) return;
+
+    LV_PROFILER_DRAW_BEGIN;
+    lv_draw_label_iterate_characters(t, dsc, coords, draw_letter_cb);
+    LV_PROFILER_DRAW_END;
+}
+
+/**********************
+ *   STATIC FUNCTIONS
+ **********************/
 
 static bool is_width_aligned(uint32_t width, uint32_t format)
 {
@@ -133,19 +145,6 @@ static void draw_raw_bitmap_internal(lv_draw_ambiq_unit_t* unit, const void* bit
 
 }
 
-void lv_draw_ambiq_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords)
-{
-    if(dsc->opa <= LV_OPA_MIN) return;
-
-    LV_PROFILER_DRAW_BEGIN;
-    lv_draw_label_iterate_characters(t, dsc, coords, draw_letter_cb);
-    LV_PROFILER_DRAW_END;
-}
-
-/**********************
- *   STATIC FUNCTIONS
- **********************/
-
 static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc,
                                                  lv_draw_fill_dsc_t * fill_draw_dsc, const lv_area_t * fill_area)
 {
@@ -190,36 +189,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 #endif
                 }
                 break;
-
-                // case LV_FONT_GLYPH_FORMAT_A1:
-                // case LV_FONT_GLYPH_FORMAT_A2:
-                // case LV_FONT_GLYPH_FORMAT_A4: 
-                // case LV_FONT_GLYPH_FORMAT_A8:
-                //     {
- 
-    
-                //         lv_area_copy(&raster_coords, glyph_draw_dsc->letter_coords);
-                //         lv_area_move(&raster_coords, -layer->buf_area.x1, -layer->buf_area.y1);
-    
-                //         lv_draw_buf_t * draw_buf = glyph_draw_dsc->glyph_data;
-    
-                //         if ( (color & 0xFF000000U) == 0xFF000000U) {
-                //             lv_ambiq_set_blend_blit(NEMA_BL_SIMPLE);
-                //         } else {
-                //             lv_ambiq_set_blend_blit(NEMA_BL_SIMPLE|NEMA_BLOP_MODULATE_A);
-                //             nema_set_const_color(color); 
-                //         }
-                //         nema_set_tex_color(color);
-                //         nema_bind_src_tex((uintptr_t)draw_buf->data, draw_buf->header.w, draw_buf->header.h, NEMA_A8, draw_buf->header.stride, NEMA_FILTER_PS);
-    
-                //         nema_matrix3x3_t m;
-                //         nema_mat3x3_load_identity(m);
-                //         nema_mat3x3_translate(m, -raster_coords.x1, -raster_coords.y1);
-                //         nema_set_matrix(m);
-                //         //nema_set_matrix_translate(raster_coords.x1, raster_coords.y1);
-                //         nema_raster_rect(raster_coords.x1, raster_coords.y1, raster_coords.x2 - raster_coords.x1 + 1, raster_coords.y2 - raster_coords.y1 + 1);
-                //     }
-                //     break;
 
             case LV_FONT_GLYPH_FORMAT_A1:
             case LV_FONT_GLYPH_FORMAT_A2:
@@ -305,6 +274,13 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                     lv_draw_ambiq_image(t, &img_dsc, glyph_draw_dsc->letter_coords);
                 }
                 break;
+
+            case LV_FONT_GLYPH_FORMAT_VECTOR: {
+                    lv_draw_ambiq_vector_font(t, glyph_draw_dsc);
+                }
+                break;
+
+
             default:
                 break;
         }

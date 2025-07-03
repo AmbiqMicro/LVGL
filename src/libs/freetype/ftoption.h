@@ -258,7 +258,7 @@ FT_BEGIN_HEADER
  *   options set by those programs have precedence, overwriting the value
  *   here with the configured one.
  */
-#define FT_CONFIG_OPTION_USE_PNG
+//#define FT_CONFIG_OPTION_USE_PNG
 
 /**************************************************************************
  *
@@ -695,7 +695,7 @@ FT_BEGIN_HEADER
  * 'avar' tables).  Tagged 'Font Variations', this is now part of OpenType
  * also.  This has many similarities to Type~1 Multiple Masters support.
  */
-#define TT_CONFIG_OPTION_GX_VAR_SUPPORT
+//#define TT_CONFIG_OPTION_GX_VAR_SUPPORT
 
 /**************************************************************************
  *
