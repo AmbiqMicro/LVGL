@@ -43,20 +43,23 @@
  *********************/
 #include "../../core/lv_refr.h"
 
-#if LV_USE_DRAW_AMBIQ
-#if LV_USE_AMBIQ_VG
+#if LV_USE_DRAW_AMBIQ && LV_USE_AMBIQ_VG
 
 #include "lv_draw_ambiq_private.h"
 #include "lv_draw_ambiq.h"
 #include "../lv_draw_label_private.h"
+
+#if LV_USE_FREETYPE
 #include "../../libs/freetype/lv_freetype_private.h"
+#endif
 
 /*********************
  *      DEFINES
  *********************/
+#if LV_USE_FREETYPE
 #define FT_F26DOT6_SHIFT 6
 #define FT_F26DOT6_TO_PATH_SCALE(x) (LV_FREETYPE_F26DOT6_TO_FLOAT(x) / (1 << FT_F26DOT6_SHIFT))
-
+#endif
 /**********************
  *      TYPEDEFS
  **********************/
@@ -103,7 +106,7 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
     if(lv_freetype_is_outline_font(glyph_draw_dsc->g->resolved_font)) {
         lv_draw_ambiq_vector_font_ft(t, glyph_draw_dsc);
     }
-#endif  
+#endif
 }
 
 #if LV_USE_FREETYPE
@@ -194,7 +197,7 @@ static inline void lv_ambiq_ft_data_array_push(int32_t x, int32_t y)
 
     res = lv_array_push_back(&path_data, &x_f);
     LV_ASSERT(res == LV_RESULT_OK);
-            
+
     res = lv_array_push_back(&path_data, &y_f);
     LV_ASSERT(res == LV_RESULT_OK);
 }
@@ -211,10 +214,10 @@ static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * p
     lv_freetype_outline_type_t type = param->type;
     switch(type) {
         case LV_FREETYPE_OUTLINE_END:
-            seg = NEMA_VG_PRIM_CLOSE;          
+            seg = NEMA_VG_PRIM_CLOSE;
             break;
         case LV_FREETYPE_OUTLINE_MOVE_TO:
-            seg = NEMA_VG_PRIM_MOVE;          
+            seg = NEMA_VG_PRIM_MOVE;
             break;
         case LV_FREETYPE_OUTLINE_LINE_TO:
             seg = NEMA_VG_PRIM_LINE;
@@ -248,28 +251,25 @@ static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * p
 
     if(seg != NEMA_VG_PRIM_CLOSE)
     {
-        lv_ambiq_ft_data_array_push(param->to.x, param->to.y);       
+        lv_ambiq_ft_data_array_push(param->to.x, param->to.y);
     }
 
     if((type == LV_FREETYPE_OUTLINE_END) || (type == LV_FREETYPE_OUTLINE_BORDER_START))
     {
-        nema_vg_path_set_shape(cur_path, 
-                                lv_array_size(&path_seg), lv_array_front(&path_seg), 
+        nema_vg_path_set_shape(cur_path,
+                                lv_array_size(&path_seg), lv_array_front(&path_seg),
                                 lv_array_size(&path_data), lv_array_front(&path_data));
     }
 
     if(type == LV_FREETYPE_OUTLINE_BORDER_START)
     {
         outline->glyph_border = nema_vg_path_create();
-                            
+
         cur_path = outline->glyph_border;
     }
 
     LV_PROFILER_DRAW_END;
 }
-
-
-#endif /* LV_USE_FREETYPE */
 
 static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
 {
@@ -299,7 +299,7 @@ static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
     LV_ASSERT_MALLOC(seg);
 
     lv_array_init_from_buf(&path_data, data, data_size, sizeof(float));
-    lv_array_init_from_buf(&path_seg, seg, seg_size, sizeof(uint8_t));    
+    lv_array_init_from_buf(&path_seg, seg, seg_size, sizeof(uint8_t));
 
     LV_PROFILER_DRAW_END;
 
@@ -330,13 +330,13 @@ static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline)
         lv_free(seg);
     }
 
-    if(outline->glyph_path != NULL) 
+    if(outline->glyph_path != NULL)
     {
         nema_vg_path_destroy(outline->glyph_path);
         outline->glyph_path = NULL;
     }
 
-    if(outline->glyph_border != NULL) 
+    if(outline->glyph_border != NULL)
     {
         nema_vg_path_destroy(outline->glyph_border);
         outline->glyph_border = NULL;
@@ -345,6 +345,7 @@ static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline)
     lv_free(outline);
     LV_PROFILER_DRAW_END;
 }
+#endif /* LV_USE_FREETYPE */
 
-#endif  /*LV_USE_NEMA_VG*/
-#endif  /*LV_USE_DRAW_AMBIQ*/
+#endif  /*LV_USE_DRAW_AMBIQ && LV_USE_AMBIQ_VG*/
+
