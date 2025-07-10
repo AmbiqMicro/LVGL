@@ -50,15 +50,15 @@
 #include "../lv_draw_label_private.h"
 
 #if LV_USE_FREETYPE
-#include "../../libs/freetype/lv_freetype_private.h"
+    #include "../../libs/freetype/lv_freetype_private.h"
 #endif
 
 /*********************
  *      DEFINES
  *********************/
 #if LV_USE_FREETYPE
-#define FT_F26DOT6_SHIFT 6
-#define FT_F26DOT6_TO_PATH_SCALE(x) (LV_FREETYPE_F26DOT6_TO_FLOAT(x) / (1 << FT_F26DOT6_SHIFT))
+    #define FT_F26DOT6_SHIFT 6
+    #define FT_F26DOT6_TO_PATH_SCALE(x) (LV_FREETYPE_F26DOT6_TO_FLOAT(x) / (1 << FT_F26DOT6_SHIFT))
 #endif
 /**********************
  *      TYPEDEFS
@@ -129,7 +129,16 @@ static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t
     lv_point_t pos = {glyph_draw_dsc->letter_coords->x1, glyph_draw_dsc->letter_coords->y1};
     float scale = FT_F26DOT6_TO_PATH_SCALE(lv_freetype_outline_get_scale(glyph_draw_dsc->g->resolved_font));
     nema_mat3x3_load_identity(matrix);
-    nema_mat3x3_scale(matrix, scale, -scale);
+
+    if(glyph_draw_dsc->rotation % 3600) {
+        nema_mat3x3_scale(matrix, scale, -scale);
+        nema_mat3x3_translate(matrix, -glyph_draw_dsc->pivot.x, -(glyph_draw_dsc->g->box_h + glyph_draw_dsc->g->ofs_y));
+        nema_mat3x3_rotate(matrix, (float)(glyph_draw_dsc->rotation % 3600) / 10.f);
+        nema_mat3x3_translate(matrix, glyph_draw_dsc->pivot.x, (glyph_draw_dsc->g->box_h + glyph_draw_dsc->g->ofs_y));
+    }
+    else {
+        nema_mat3x3_scale(matrix, scale, -scale);
+    }
     nema_mat3x3_translate(matrix, pos.x - glyph_draw_dsc->g->ofs_x,
                           pos.y + glyph_draw_dsc->g->box_h + glyph_draw_dsc->g->ofs_y);
 
@@ -148,14 +157,14 @@ static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t
     nema_vg_draw_path(outline->glyph_path, unit->vg_paint);
 
     // draw boarder
-    if(glyph_draw_dsc->outline_stroke_width > 0)
-    {
+    if(glyph_draw_dsc->outline_stroke_width > 0) {
         nema_vg_set_fill_rule(NEMA_VG_STROKE);
 
-        float stroke_width_in_object_space = ((float)glyph_draw_dsc->outline_stroke_width)/scale;
+        float stroke_width_in_object_space = ((float)glyph_draw_dsc->outline_stroke_width) / scale;
         nema_vg_stroke_set_width(stroke_width_in_object_space);
 
-        uint32_t border_color = lv_ambiq_color_convert(glyph_draw_dsc->outline_stroke_color, glyph_draw_dsc->outline_stroke_opa);
+        uint32_t border_color = lv_ambiq_color_convert(glyph_draw_dsc->outline_stroke_color,
+                                                       glyph_draw_dsc->outline_stroke_opa);
         nema_vg_paint_set_paint_color(unit->vg_paint, border_color);
 
         nema_vg_path_set_matrix(outline->glyph_border, matrix);
@@ -239,30 +248,25 @@ static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * p
     res = lv_array_push_back(&path_seg, &seg);
     LV_ASSERT(res == LV_RESULT_OK);
 
-    if((seg == NEMA_VG_PRIM_BEZIER_CUBIC) || (seg == NEMA_VG_PRIM_BEZIER_QUAD))
-    {
+    if((seg == NEMA_VG_PRIM_BEZIER_CUBIC) || (seg == NEMA_VG_PRIM_BEZIER_QUAD)) {
         lv_ambiq_ft_data_array_push(param->control1.x, param->control1.y);
     }
 
-    if(seg == NEMA_VG_PRIM_BEZIER_CUBIC)
-    {
+    if(seg == NEMA_VG_PRIM_BEZIER_CUBIC) {
         lv_ambiq_ft_data_array_push(param->control2.x, param->control2.y);
     }
 
-    if(seg != NEMA_VG_PRIM_CLOSE)
-    {
+    if(seg != NEMA_VG_PRIM_CLOSE) {
         lv_ambiq_ft_data_array_push(param->to.x, param->to.y);
     }
 
-    if((type == LV_FREETYPE_OUTLINE_END) || (type == LV_FREETYPE_OUTLINE_BORDER_START))
-    {
+    if((type == LV_FREETYPE_OUTLINE_END) || (type == LV_FREETYPE_OUTLINE_BORDER_START)) {
         nema_vg_path_set_shape(cur_path,
-                                lv_array_size(&path_seg), lv_array_front(&path_seg),
-                                lv_array_size(&path_data), lv_array_front(&path_data));
+                               lv_array_size(&path_seg), lv_array_front(&path_seg),
+                               lv_array_size(&path_data), lv_array_front(&path_data));
     }
 
-    if(type == LV_FREETYPE_OUTLINE_BORDER_START)
-    {
+    if(type == LV_FREETYPE_OUTLINE_BORDER_START) {
         outline->glyph_border = nema_vg_path_create();
 
         cur_path = outline->glyph_border;
@@ -275,9 +279,8 @@ static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
 {
     LV_PROFILER_DRAW_BEGIN;
 
-    if(param->outline == NULL)
-    {
-        lv_ambiq_ft_glyph_t *outline = lv_malloc(sizeof(lv_ambiq_ft_glyph_t));
+    if(param->outline == NULL) {
+        lv_ambiq_ft_glyph_t * outline = lv_malloc(sizeof(lv_ambiq_ft_glyph_t));
         LV_ASSERT_MALLOC(outline);
 
         outline->glyph_path = nema_vg_path_create();
@@ -293,9 +296,9 @@ static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
 
     uint32_t data_size = param->sizes.data_size;
     uint32_t seg_size = param->sizes.segments_size + 1;
-    void* data = lv_malloc(data_size * sizeof(float));
+    void * data = lv_malloc(data_size * sizeof(float));
     LV_ASSERT_MALLOC(data);
-    void* seg = lv_malloc(seg_size * sizeof(uint8_t));
+    void * seg = lv_malloc(seg_size * sizeof(uint8_t));
     LV_ASSERT_MALLOC(seg);
 
     lv_array_init_from_buf(&path_data, data, data_size, sizeof(float));
@@ -312,32 +315,28 @@ static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline)
     LV_ASSERT_NULL(outline);
 
     uint32_t data_size;
-    float* data;
+    float * data;
     uint32_t seg_size;
-    uint8_t* seg;
+    uint8_t * seg;
 
-    if(outline->glyph_path != NULL)
-    {
+    if(outline->glyph_path != NULL) {
         lv_ambiq_get_path_vbuf(outline->glyph_path, &seg_size, &data_size, &seg, &data);
         lv_free(data);
         lv_free(seg);
     }
 
-    if(outline->glyph_border != NULL)
-    {
+    if(outline->glyph_border != NULL) {
         lv_ambiq_get_path_vbuf(outline->glyph_border, &seg_size, &data_size, &seg, &data);
         lv_free(data);
         lv_free(seg);
     }
 
-    if(outline->glyph_path != NULL)
-    {
+    if(outline->glyph_path != NULL) {
         nema_vg_path_destroy(outline->glyph_path);
         outline->glyph_path = NULL;
     }
 
-    if(outline->glyph_border != NULL)
-    {
+    if(outline->glyph_border != NULL) {
         nema_vg_path_destroy(outline->glyph_border);
         outline->glyph_border = NULL;
     }
