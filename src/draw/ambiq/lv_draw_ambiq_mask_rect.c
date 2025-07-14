@@ -54,23 +54,22 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
     lv_layer_t * target_layer = t->target_layer;
     lv_area_t * buf_area = &target_layer->buf_area;
     lv_area_t clear_area;
-    lv_draw_ambiq_unit_t* unit = (lv_draw_ambiq_unit_t*)t->draw_unit;
+    lv_draw_ambiq_unit_t * unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
 
-    if(!dsc->keep_outside)
-    {
+    if(!dsc->keep_outside) {
         /* set the blend mode to SRC*/
         lv_ambiq_set_blend_fill(unit, NEMA_BL_SRC);
         nema_set_raster_color(0x00000000);
 
         /*Clear the top part*/
         lv_area_set(&clear_area, t->clip_area.x1, t->clip_area.y1, t->clip_area.x2,
-                dsc->area.y1 - 1);
+                    dsc->area.y1 - 1);
         lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
         nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
 
         /*Clear the bottom part*/
         lv_area_set(&clear_area, t->clip_area.x1, dsc->area.y2 + 1, t->clip_area.x2,
-                t->clip_area.y2);
+                    t->clip_area.y2);
         lv_area_move(&clear_area, -buf_area->x1, -buf_area->y1);
         nema_raster_rect(clear_area.x1, clear_area.y1, lv_area_get_width(&clear_area), lv_area_get_height(&clear_area));
 
@@ -102,33 +101,33 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
         LV_LOG_ERROR("Failed to allocate memory for stencil buffer");
         return;
     }
-    nema_bind_tex(NEMA_TEX1, 
-                  (uintptr_t)unit->stencil_buffer->data, 
-                  unit->stencil_buffer->header.w, 
-                  unit->stencil_buffer->header.h, 
-                  NEMA_L8, 
-                  unit->stencil_buffer->header.stride, 
+    nema_bind_tex(NEMA_TEX1,
+                  (uintptr_t)unit->stencil_buffer->data,
+                  unit->stencil_buffer->header.w,
+                  unit->stencil_buffer->header.h,
+                  NEMA_L8,
+                  unit->stencil_buffer->header.stride,
                   NEMA_FILTER_BL);
 
     /* set the blend mode to SRC*/
     lv_ambiq_blend_mode_change(unit,  NEMA_BL_SRC, NEMA_TEX1, NEMA_NOTEX, NEMA_NOTEX, false);
-    nema_set_clip_temp(0 , 0 , radius, radius);
+    nema_set_clip_temp(0, 0, radius, radius);
 
     /* draw the mask to this buffer*/
     nema_set_raster_color(0x00000000);
     nema_raster_rect(0, 0, radius, radius);
-    nema_set_raster_color(0xffffffff);   
-    nema_raster_stroked_arc_aa(0, radius, radius*0.5f, radius, 270.f, 360.f);
+    nema_set_raster_color(0xffffffff);
+    nema_raster_stroked_arc_aa(0, radius, radius * 0.5f, radius, 270.f, 360.f);
 
     nema_set_clip_pop();
 
-    nema_bind_tex(NEMA_TEX1, 
-        (uintptr_t)unit->stencil_buffer->data, 
-        unit->stencil_buffer->header.w, 
-        unit->stencil_buffer->header.h, 
-        NEMA_A8, 
-        unit->stencil_buffer->header.stride, 
-        NEMA_FILTER_BL);
+    nema_bind_tex(NEMA_TEX1,
+                  (uintptr_t)unit->stencil_buffer->data,
+                  unit->stencil_buffer->header.w,
+                  unit->stencil_buffer->header.h,
+                  NEMA_A8,
+                  unit->stencil_buffer->header.stride,
+                  NEMA_FILTER_BL);
     lv_ambiq_blend_mode_change(unit, NEMA_BL_DST_IN, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, false);
     nema_set_tex_color(0xffffffff);
 
@@ -155,7 +154,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
         nema_set_matrix(m);
 
         /* draw the blurred corner to the stencil buffer*/
-        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y, 
+        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y,
                          clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
     }
 
@@ -169,9 +168,9 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
     lv_area_copy(&raster_area, &blend_area);
 
     if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
-    
+
         /* Blit the blurred corner to the stencil buffer*/
-    
+
         /* set the translate matrix*/
         nema_mat3x3_load_identity(m);
         m[1][1] = -1;
@@ -179,10 +178,10 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
         m[1][2] = radius - 1 + blend_area.y1 - layer_buf_start_y;
         nema_mat3x3_invert(m);
         nema_set_matrix(m);
-    
+
         /* draw the blurred corner to the stencil buffer*/
-        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y, 
-                        clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
+        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y,
+                         clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
     }
 
     /*Bottom left corner.*/
@@ -194,7 +193,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
 
     if(lv_area_intersect(&clip_raster_area, &raster_area, &t->clip_area)) {
         /* Blit the blurred corner to the stencil buffer*/
-    
+
         /* set the translate matrix*/
         nema_mat3x3_load_identity(m);
         m[0][0] = -1;
@@ -203,10 +202,10 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
         m[1][2] = radius - 1 + blend_area.y1 - layer_buf_start_y;
         nema_mat3x3_invert(m);
         nema_set_matrix(m);
-    
+
         /* draw the blurred corner to the stencil buffer*/
-        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y, 
-                        clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
+        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y,
+                         clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
     }
 
     /*Top left corner*/
@@ -224,10 +223,10 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
         m[1][2] = blend_area.y1 - layer_buf_start_y;
         nema_mat3x3_invert(m);
         nema_set_matrix(m);
-    
+
         /* draw the mask to the layer buffer*/
-        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y, 
-                        clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
+        nema_raster_rect(clip_raster_area.x1 - layer_buf_start_x, clip_raster_area.y1 - layer_buf_start_y,
+                         clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
     }
 
 

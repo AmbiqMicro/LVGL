@@ -57,24 +57,20 @@ void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, cons
 
     uint32_t blending_mode;
 
-    if(layer->color_format == LV_COLOR_FORMAT_ARGB8888)
-    {
-        blending_mode = NEMA_BL_SRC_OVER|NEMA_BLOP_SRC_PREMULT;
+    if(layer->color_format == LV_COLOR_FORMAT_ARGB8888) {
+        blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
     }
-    else
-    {
+    else {
         blending_mode = NEMA_BL_SIMPLE;
     }
 
     if((grad_dir == LV_GRAD_DIR_NONE)) {
         lv_ambiq_set_blend_fill(draw_ambiq_unit, blending_mode);
         nema_set_raster_color(bg_color);
-        if(rout == 0)
-        {
+        if(rout == 0) {
             nema_raster_rect(bg_coords.x1, bg_coords.y1, coords_w, coords_h);
         }
-        else
-        {
+        else {
             nema_raster_rounded_rect(bg_coords.x1, bg_coords.y1, coords_w, coords_h, rout);
         }
         return;
@@ -82,8 +78,7 @@ void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, cons
 
     int stops_count = dsc->grad.stops_count;
 
-    if(stops_count > LV_GRADIENT_MAX_STOPS)
-    {
+    if(stops_count > LV_GRADIENT_MAX_STOPS) {
         LV_LOG_WARN("stops_count is bigger than LV_GRADIENT_MAX_STOPS, use LV_GRADIENT_MAX_STOPS.\n");
         stops_count = LV_GRADIENT_MAX_STOPS;
     }
@@ -93,13 +88,12 @@ void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, cons
     float stops[LV_GRADIENT_MAX_STOPS];
     color_var_t colors[LV_GRADIENT_MAX_STOPS];
 
-    for(uint32_t i=0; i<stops_count; i++)
-    {
+    for(uint32_t i = 0; i < stops_count; i++) {
         stops[i] = (float)dsc->grad.stops[i].frac / 255.f;
         colors[i].r = (float)dsc->grad.stops[i].color.red;
         colors[i].g = (float)dsc->grad.stops[i].color.green;
-        colors[i].b = (float)dsc->grad.stops[i].color.blue;   
-        colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;               
+        colors[i].b = (float)dsc->grad.stops[i].color.blue;
+        colors[i].a = (float)dsc->grad.stops[i].opa * (float)dsc->opa / 255.f;
     }
 
     uint32_t small_texture_size_pixel = draw_ambiq_unit->small_texture_buffer->header.w;
@@ -114,8 +108,8 @@ void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, cons
 
     nema_matrix3x3_t m;
     float rotate_angle = (grad_dir == LV_GRAD_DIR_HOR) ? 0.f : 90.f;
-    float scale_x = (grad_dir == LV_GRAD_DIR_HOR) ? (float)coords_w/small_texture_size_pixel : (float)coords_w;
-    float scale_y = (grad_dir == LV_GRAD_DIR_HOR) ? (float)coords_h : (float)coords_h/small_texture_size_pixel;
+    float scale_x = (grad_dir == LV_GRAD_DIR_HOR) ? (float)coords_w / small_texture_size_pixel : (float)coords_w;
+    float scale_y = (grad_dir == LV_GRAD_DIR_HOR) ? (float)coords_h : (float)coords_h / small_texture_size_pixel;
 
 
     nema_mat3x3_load_identity(m);
@@ -128,12 +122,10 @@ void lv_draw_ambiq_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc, cons
 
     nema_set_matrix_all(m);
 
-    if(rout == 0)
-    {
+    if(rout == 0) {
         nema_raster_rect(bg_coords.x1, bg_coords.y1, coords_w, coords_h);
     }
-    else
-    {
+    else {
         nema_raster_rounded_rect(bg_coords.x1, bg_coords.y1, coords_w, coords_h, rout);
     }
 

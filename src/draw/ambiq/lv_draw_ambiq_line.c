@@ -43,11 +43,11 @@
 void
 nema_raster_line_aa(float x0, float y0, float x1, float y1, float w)
 {
-    float dX = x1-x0;
-    float dY = y1-y0;
+    float dX = x1 - x0;
+    float dY = y1 - y0;
     float w_ = w;
 
-    if (w_ < 1.f) {
+    if(w_ < 1.f) {
         w_ = 1.f;
     }
 
@@ -55,34 +55,34 @@ nema_raster_line_aa(float x0, float y0, float x1, float y1, float w)
     float dx, dy;
 
     // if line is vertical
-    if ( nema_absf(dX) < 0.5f ) {
+    if(nema_absf(dX) < 0.5f) {
         dy = 0.f;
-        dx = w_*0.5f;
+        dx = w_ * 0.5f;
     }
     else {
-        float l_tan = dY/dX;
+        float l_tan = dY / dX;
 
         // nema_atan is more suitable than nema_sqrt
         float angle = nema_atan(l_tan);
-        dx =  nema_sin(angle)*w_*0.5f;
-        dy = -nema_cos(angle)*w_*0.5f;
+        dx =  nema_sin(angle) * w_ * 0.5f;
+        dy = -nema_cos(angle) * w_ * 0.5f;
     }
 
-    float qx0 = x0+dx;
-    float qx1 = x1+dx;
-    float qx2 = x1-dx;
-    float qx3 = x0-dx;
-    float qy0 = y0+dy;
-    float qy1 = y1+dy;
-    float qy2 = y1-dy;
-    float qy3 = y0-dy;
+    float qx0 = x0 + dx;
+    float qx1 = x1 + dx;
+    float qx2 = x1 - dx;
+    float qx3 = x0 - dx;
+    float qy0 = y0 + dy;
+    float qy1 = y1 + dy;
+    float qy2 = y1 - dy;
+    float qy3 = y0 - dy;
 
-    uint32_t prev_aa = nema_enable_aa(1,1,1,1);
+    uint32_t prev_aa = nema_enable_aa(1, 1, 1, 1);
 
     nema_raster_quad_fx(nema_f2fx(qx0), nema_f2fx(qy0),
                         nema_f2fx(qx1), nema_f2fx(qy1),
                         nema_f2fx(qx2), nema_f2fx(qy2),
-                        nema_f2fx(qx3), nema_f2fx(qy3) );
+                        nema_f2fx(qx3), nema_f2fx(qy3));
 
     (void)nema_enable_aa_flags(prev_aa);
 }
@@ -110,12 +110,10 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
     uint32_t blending_mode;
 
-    if(layer->color_format == LV_COLOR_FORMAT_ARGB8888)
-    {
-        blending_mode = NEMA_BL_SRC_OVER|NEMA_BLOP_SRC_PREMULT;
+    if(layer->color_format == LV_COLOR_FORMAT_ARGB8888) {
+        blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
     }
-    else
-    {
+    else {
         blending_mode = NEMA_BL_SIMPLE;
     }
 
@@ -127,34 +125,31 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
     float w = dsc->width;
 
     // if line is vertical
-    if ( dsc->p2.x == dsc->p1.x ) {
-        if(dsc->p2.y > dsc->p1.y)
-        {
+    if(dsc->p2.x == dsc->p1.x) {
+        if(dsc->p2.y > dsc->p1.y) {
             angle = 90;
         }
-        else
-        {
+        else {
             angle = -90;
         }
     }
     else {
-        float dX = x1-x0;
-        float dY = y1-y0;
+        float dX = x1 - x0;
+        float dY = y1 - y0;
 
-        angle = nema_atan(dY/dX);
+        angle = nema_atan(dY / dX);
     }
 
     bool dashed = dsc->dash_gap && dsc->dash_width;
-    if(dashed)
-    {
+    if(dashed) {
         //Create dash in RGBA format
         nema_bind_tex(NEMA_TEX1, (uintptr_t)draw_ambiq_unit->small_texture_buffer->data,
                       draw_ambiq_unit->small_texture_buffer->header.w,
                       1,
                       NEMA_RGBA8888,
-                      0, NEMA_FILTER_BL|NEMA_TEX_REPEAT);
+                      0, NEMA_FILTER_BL | NEMA_TEX_REPEAT);
         lv_ambiq_dashline_create(dsc->dash_width, dsc->dash_gap, bg_color, NEMA_TEX1);
-        
+
 
         // set blend
         lv_ambiq_blend_mode_change(draw_ambiq_unit, blending_mode, NEMA_TEX0, NEMA_TEX1, NEMA_NOTEX, true);
@@ -168,7 +163,7 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
 
         nema_mat3x3_load_identity(m);
         nema_mat3x3_scale(m, scale_x, scale_y);
-        nema_mat3x3_translate(m, 0, -w*0.5f);
+        nema_mat3x3_translate(m, 0, -w * 0.5f);
         nema_mat3x3_rotate(m, rotate_angle);
         nema_mat3x3_translate(m, x0, y0);
 
@@ -177,26 +172,25 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
 
         nema_set_matrix_all(m);
     }
-    else
-    {
+    else {
         lv_ambiq_set_blend_fill(draw_ambiq_unit, blending_mode);
         nema_set_raster_color(bg_color);
     }
 
     // Draw Line
-    nema_raster_line_aa(x0, y0, x1, y1, w); 
+    nema_raster_line_aa(x0, y0, x1, y1, w);
 
     //Draw line end
     if(dsc->round_start && (dsc->width > 1)) {
 
 
-        nema_raster_stroked_arc_aa(x0, y0, w*0.25f, w*0.5f, 90.f+angle, 270.f + angle);
+        nema_raster_stroked_arc_aa(x0, y0, w * 0.25f, w * 0.5f, 90.f+angle, 270.f + angle);
     }
-    
+
     if(dsc->round_end && (dsc->width > 1)) {
 
 
-        nema_raster_stroked_arc_aa(x1, y1, w*0.25f, w*0.5f, -90.f+angle, 90.f + angle);
+        nema_raster_stroked_arc_aa(x1, y1, w * 0.25f, w * 0.5f, -90.f+angle, 90.f + angle);
     }
 
 }
