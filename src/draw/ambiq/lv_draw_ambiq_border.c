@@ -51,7 +51,7 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
     int32_t short_side = LV_MIN(coords_w, coords_h);
     if(rout > short_side >> 1) rout = short_side >> 1;
 
-    
+
     int32_t border_width = LV_MIN(dsc->width, short_side >> 1);
 
     bool top_side = dsc->side & LV_BORDER_SIDE_TOP;
@@ -61,23 +61,21 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
 
     uint32_t blending_mode;
 
-    if(t->target_layer->color_format == LV_COLOR_FORMAT_ARGB8888)
-    {
-        blending_mode = NEMA_BL_SRC_OVER|NEMA_BLOP_SRC_PREMULT;
+    if(t->target_layer->color_format == LV_COLOR_FORMAT_ARGB8888) {
+        blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
     }
-    else
-    {
+    else {
         blending_mode = NEMA_BL_SIMPLE;
     }
 
     uint32_t bg_color    = lv_ambiq_color_convert(dsc->color, dsc->opa);
 
 
-    lv_ambiq_set_blend_fill((lv_draw_ambiq_unit_t*)t->draw_unit, blending_mode);
+    lv_ambiq_set_blend_fill((lv_draw_ambiq_unit_t *)t->draw_unit, blending_mode);
     nema_set_raster_color(bg_color);
 
     int draw_buf_offset_x = t->target_layer->buf_area.x1;
-    int draw_buf_offset_y = t->target_layer->buf_area.y1;    
+    int draw_buf_offset_y = t->target_layer->buf_area.y1;
 
     int x1;
     int y1;
@@ -85,123 +83,107 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
     int h;
 
 
-    if(left_side)
-    {
-        if(rout)
-        {
+    if(left_side) {
+        if(rout) {
             x1 = coords->x1;
             y1 = coords->y1 + rout;
             w = LV_MIN(border_width, rout);
             h = coords_h - 2 * rout;
         }
-        else
-        {
+        else {
             x1 = coords->x1;
             y1 = coords->y1 + ((top_side) ? border_width : 0);
             w = border_width;
-            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);   
+            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);
         }
 
         nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
 
-        if(rout && (border_width > rout))
-        {
+        if(rout && (border_width > rout)) {
 
             x1 = coords->x1 + rout;
             y1 = coords->y1 + ((top_side) ? border_width : 0);
             w = border_width - rout;
-            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0); 
- 
+            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);
+
             nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
         }
     }
 
-    if(right_side)
-    {
-        if(rout)
-        {
+    if(right_side) {
+        if(rout) {
             x1 = coords->x2 + 1 - LV_MIN(border_width, rout);
             y1 = coords->y1 + rout;
             w = LV_MIN(border_width, rout);
             h = coords_h - 2 * rout;
         }
-        else
-        {
+        else {
             x1 = coords->x2 + 1 - border_width;
             y1 = coords->y1 + ((top_side) ? border_width : 0);
             w = border_width;
-            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);   
+            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);
         }
 
         nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
 
-        if(rout && (border_width > rout))
-        {
+        if(rout && (border_width > rout)) {
 
             x1 = coords->x2 + 1 - border_width;
             y1 = coords->y1 + ((top_side) ? border_width : 0);
             w = border_width - rout;
-            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);  
-  
+            h = coords_h - ((top_side) ? border_width : 0) - ((bottom_side) ? border_width : 0);
+
             nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
         }
     }
 
-    if(top_side)
-    {
-        if(rout)
-        {
+    if(top_side) {
+        if(rout) {
             x1 = coords->x1 + rout;
             y1 = coords->y1;
             w = coords_w - 2 * rout;
             h = LV_MIN(border_width, rout);
         }
-        else
-        {
+        else {
             x1 = coords->x1;
             y1 = coords->y1;
             w = coords_w;
-            h = border_width;   
+            h = border_width;
         }
         nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
 
-        if(rout && (border_width > rout))
-        {
+        if(rout && (border_width > rout)) {
 
             x1 = coords->x1 + ((left_side) ? rout : 0);
             y1 = coords->y1 + rout;
             w = coords_w - ((left_side) ? rout : 0) - ((right_side) ? rout : 0);
-            h = border_width - rout; 
-   
+            h = border_width - rout;
+
             nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
         }
     }
 
-    if(bottom_side)
-    {
-        if(rout)
-        {
+    if(bottom_side) {
+        if(rout) {
             x1 = coords->x1 + rout;
             y1 = coords->y2 + 1 - LV_MIN(border_width, rout);
             w = coords_w - 2 * rout;
             h = LV_MIN(border_width, rout);
         }
-        else
-        {
+        else {
             x1 = coords->x1;
             y1 = coords->y2 + 1 - border_width;
             w = coords_w;
-            h = border_width;   
+            h = border_width;
         }
 
         nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
 
-        if(rout && (border_width > rout))
-        {
+        if(rout && (border_width > rout)) {
             x1 = coords->x1 + ((left_side) ? rout : 0);
             y1 = coords->y2 + 1 - border_width;
             w = coords_w - ((left_side) ? rout : 0) - ((right_side) ? rout : 0);
-            h = border_width - rout;   
+            h = border_width - rout;
 
             nema_raster_rect(x1 - draw_buf_offset_x, y1 - draw_buf_offset_y, w, h);
         }
@@ -214,22 +196,18 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
     float r_arc;
     float w_arc;
 
-    if(rout != 0)
-    {
-        if(left_side || top_side)
-        {
+    if(rout != 0) {
+        if(left_side || top_side) {
             clip.x1 = coords->x1;
             clip.y1 = coords->y1;
             clip.x2 = clip.x1 + rout - 1;
             clip.y2 = clip.y1 + rout - 1;
 
             // Left up corner
-            if(left_side && !top_side)
-            {
+            if(left_side && !top_side) {
                 clip.x2 = clip.x1 + LV_MIN(border_width, rout) - 1;
             }
-            else if(!left_side && top_side)
-            {
+            else if(!left_side && top_side) {
                 clip.y2 = clip.y1 + LV_MIN(border_width, rout) - 1;
             }
 
@@ -237,20 +215,19 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
-            nema_set_clip_temp(clip_intersect.x1 , clip_intersect.y1 , 
-                               clip_intersect.x2 - clip_intersect.x1 + 1, 
+            nema_set_clip_temp(clip_intersect.x1, clip_intersect.y1,
+                               clip_intersect.x2 - clip_intersect.x1 + 1,
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
             x_arc = (float)(coords->x1 + rout - draw_buf_offset_x);
-            y_arc = (float)(coords->y1 + rout - draw_buf_offset_y); 
+            y_arc = (float)(coords->y1 + rout - draw_buf_offset_y);
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 180.f, 270.f);
             nema_set_clip_pop();
         }
 
-        if(left_side || bottom_side)
-        {
+        if(left_side || bottom_side) {
             clip.x1 = coords->x1;
             clip.y2 = coords->y2;
 
@@ -258,12 +235,10 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
             clip.y1 = clip.y2 - rout + 1;
 
             // Left up corner
-            if(left_side && !bottom_side)
-            {
+            if(left_side && !bottom_side) {
                 clip.x2 = clip.x1 + LV_MIN(border_width, rout) - 1;
             }
-            else if(!left_side && bottom_side)
-            {
+            else if(!left_side && bottom_side) {
                 clip.y1 = clip.y2 - LV_MIN(border_width, rout) + 1;
             }
 
@@ -271,20 +246,19 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
-            nema_set_clip_temp(clip_intersect.x1 , clip_intersect.y1 , 
-                               clip_intersect.x2 - clip_intersect.x1 + 1, 
+            nema_set_clip_temp(clip_intersect.x1, clip_intersect.y1,
+                               clip_intersect.x2 - clip_intersect.x1 + 1,
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
             x_arc = (float)(coords->x1 + rout - draw_buf_offset_x);
-            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y); 
+            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y);
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 90.f, 180.f);
             nema_set_clip_pop();
         }
 
-        if(right_side || bottom_side)
-        {
+        if(right_side || bottom_side) {
             clip.x2 = coords->x2;
             clip.y2 = coords->y2;
 
@@ -292,12 +266,10 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
             clip.y1 = clip.y2 - rout + 1;
 
             // Left up corner
-            if(right_side && !bottom_side)
-            {
+            if(right_side && !bottom_side) {
                 clip.x1 = clip.x2 - LV_MIN(border_width, rout) + 1;
             }
-            else if(!right_side && bottom_side)
-            {
+            else if(!right_side && bottom_side) {
                 clip.y1 = clip.y2 - LV_MIN(border_width, rout) + 1;
             }
 
@@ -305,20 +277,19 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
-            nema_set_clip_temp(clip_intersect.x1 , clip_intersect.y1 , 
-                               clip_intersect.x2 - clip_intersect.x1 + 1, 
+            nema_set_clip_temp(clip_intersect.x1, clip_intersect.y1,
+                               clip_intersect.x2 - clip_intersect.x1 + 1,
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
             x_arc = (float)(coords->x2 - rout + 1 - draw_buf_offset_x);
-            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y); 
+            y_arc = (float)(coords->y2 - rout + 1 - draw_buf_offset_y);
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 0.f, 90.f);
             nema_set_clip_pop();
         }
 
-        if(right_side || top_side)
-        {
+        if(right_side || top_side) {
             clip.x2 = coords->x2;
             clip.y1 = coords->y1;
 
@@ -326,12 +297,10 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
             clip.y2 = clip.y1 + rout - 1;
 
             // Left up corner
-            if(right_side && !top_side)
-            {
+            if(right_side && !top_side) {
                 clip.x1 = clip.x2 - LV_MIN(border_width, rout) + 1;
             }
-            else if(!right_side && top_side)
-            {
+            else if(!right_side && top_side) {
                 clip.y2 = clip.y1 - LV_MIN(border_width, rout) + 1;
             }
 
@@ -339,12 +308,12 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
 
             lv_area_move(&clip_intersect, -draw_buf_offset_x, -draw_buf_offset_y);
 
-            nema_set_clip_temp(clip_intersect.x1 , clip_intersect.y1 , 
-                               clip_intersect.x2 - clip_intersect.x1 + 1, 
+            nema_set_clip_temp(clip_intersect.x1, clip_intersect.y1,
+                               clip_intersect.x2 - clip_intersect.x1 + 1,
                                clip_intersect.y2 - clip_intersect.y1 + 1);
 
             x_arc = (float)(coords->x2 - rout + 1 - draw_buf_offset_x);
-            y_arc = (float)(coords->y1 + rout - draw_buf_offset_y); 
+            y_arc = (float)(coords->y1 + rout - draw_buf_offset_y);
             r_arc = (float)rout - LV_MIN(border_width, rout) * 0.5f;
             w_arc = (float)LV_MIN(border_width, rout);
             nema_raster_stroked_arc_aa(x_arc, y_arc, r_arc, w_arc, 270.f, 360.f);

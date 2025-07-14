@@ -71,7 +71,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
  * @param coords        the coordinates of the image
  */
 void lv_draw_ambiq_image(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_dsc,
-                      const lv_area_t * coords);
+                         const lv_area_t * coords);
 
 /**
  * Draw a label with AMBIQ GPU render.
