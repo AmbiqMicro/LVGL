@@ -68,7 +68,7 @@ static const error_map_t gpu_error_map[] = {
     { NEMA_ERR_MUTEX_INIT, "MUTEX_INIT" },
     { NEMA_ERR_INVALID_BO, "INVALID_BO" },
     { NEMA_ERR_INVALID_CL, "INVALID_CL" },
-    { NEMA_ERR_INVALID_CL_ALIGNMENT, "INVALID_CL_ALIGNMENT" },
+    { NEMA_ERR_INVALID_CL_ALIGMENT, "INVALID_CL_ALIGNMENT" },
     { NEMA_ERR_NO_INIT, "NO_INIT" },
     { NEMA_ERR_INVALID_SECTORED_CL_SIZE, "INVALID_SECTORED_CL_SIZE" },
 };
@@ -368,7 +368,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         return LV_RESULT_INVALID;
     }
 
-#if NEMAGFX_POWER_SAVE
+#if NEMA_GFX_POWERSAVE
     uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
         LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
@@ -508,6 +508,8 @@ lv_result_t lv_draw_ambiq_vg_start(uint32_t width, uint32_t height)
                                   stencil_buffer_in_nema_format);
 
 #endif
+
+    return LV_RESULT_OK;
 }
 
 lv_result_t lv_draw_ambiq_common_end(bool sync)
@@ -545,7 +547,7 @@ lv_result_t lv_draw_ambiq_common_end(bool sync)
 uint32_t lv_draw_ambiq_bind_image_texture(const lv_draw_buf_t * decoded, uint32_t color_rgba, uint32_t tex_wrap_mode)
 {
     uint32_t blend_op_internal = 0;
-    lv_image_header_t * header = &decoded->header;
+    const lv_image_header_t * header = &decoded->header;
     uint32_t lut_size = 0;
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
 
@@ -583,14 +585,14 @@ uint32_t lv_draw_ambiq_bind_image_texture(const lv_draw_buf_t * decoded, uint32_
     }
 
     // handle alpha only color format
-    bool is_alpha_only = false;
+    //bool is_alpha_only = false;
     if((header->cf == LV_COLOR_FORMAT_A1) ||
        (header->cf == LV_COLOR_FORMAT_A2) ||
        (header->cf == LV_COLOR_FORMAT_A4) ||
        (header->cf == LV_COLOR_FORMAT_A8)) {
         uint32_t tex_color = color_rgba | 0xFF000000;
         nema_set_tex_color(tex_color);
-        is_alpha_only = true;
+        //is_alpha_only = true;
     }
     else {
         nema_set_tex_color(0x0);
@@ -631,7 +633,7 @@ uint32_t lv_draw_ambiq_bind_image_texture(const lv_draw_buf_t * decoded, uint32_
 
 uint32_t lv_draw_ambiq_bind_mask_texture(const lv_draw_buf_t * mask_image, bool multiply)
 {
-    lv_image_header_t * header = &mask_image->header;
+    const lv_image_header_t * header = &mask_image->header;
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
 
     LV_ASSERT((nema_cf == NEMA_A8) || (nema_cf == NEMA_L8));
@@ -640,24 +642,24 @@ uint32_t lv_draw_ambiq_bind_mask_texture(const lv_draw_buf_t * mask_image, bool 
     if(multiply) {
         nema_bind_tex(NEMA_TEX2,
                       (uintptr_t)mask_image->data,
-                      mask_image->header.w,
-                      mask_image->header.h,
+                      header->w,
+                      header->h,
                       NEMA_A8,
-                      mask_image->header.stride,
+                      header->stride,
                       NEMA_TEX_BORDER);
 
         lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC_IN, NEMA_TEX3, NEMA_TEX2, NEMA_NOTEX, false);
 
-        nema_blit_rect(0, 0, mask_image->header.w, mask_image->header.h);
+        nema_blit_rect(0, 0, header->w, header->h);
 
     }
     else {
         nema_bind_tex(NEMA_TEX3,
                       (uintptr_t)mask_image->data,
-                      mask_image->header.w,
-                      mask_image->header.h,
+                      header->w,
+                      header->h,
                       NEMA_A8,
-                      mask_image->header.stride,
+                      header->stride,
                       NEMA_TEX_BORDER);
     }
 
@@ -684,23 +686,23 @@ lv_result_t lv_draw_ambiq_decode_image(const void * src, bool transformed, lv_im
 
     /*The whole image is not available, we can't draw it with GPU*/
     if(decoder_dsc->decoded == NULL) {
-        lv_image_decoder_close(&decoder_dsc);
+        lv_image_decoder_close(decoder_dsc);
         LV_LOG_WARN("Ambiq GPU needs to load the whole image to GPU accessible RAM.\n");
-        return;
+        return LV_RESULT_INVALID;
     }
 
-    lv_image_header_t * header = &decoder_dsc->decoded->header;
+    const lv_image_header_t * header = &decoder_dsc->decoded->header;
 
     nema_tex_format_t nema_cf = lv_ambiq_color_format_map_src(header->cf);
     if(nema_cf == COLOR_FORMAT_INVALID) {
-        lv_image_decoder_close(&decoder_dsc);
+        lv_image_decoder_close(decoder_dsc);
         LV_LOG_WARN("GPU failed, not supported color format!");
         return LV_RESULT_INVALID;
     }
 
     if(is_mask && (header->cf != LV_COLOR_FORMAT_A8 && header->cf != LV_COLOR_FORMAT_L8)) {
         LV_LOG_WARN("The mask image is not A8/L8 format. We will ignore it.");
-        lv_image_decoder_close(&decoder_dsc);
+        lv_image_decoder_close(decoder_dsc);
         return LV_RESULT_INVALID;
     }
 

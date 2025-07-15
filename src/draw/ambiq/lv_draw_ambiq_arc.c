@@ -92,7 +92,7 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
     int32_t center_y = dsc->center.y - layer->buf_area.y1;
 
     lv_image_decoder_dsc_t decoder_dsc;
-    lv_draw_buf_t * bg_img = NULL;
+    const lv_draw_buf_t * bg_img = NULL;
     if(dsc->img_src) {
         lv_result_t res = lv_draw_ambiq_decode_image(dsc->img_src, false, &decoder_dsc, false);
         if(res == LV_RESULT_OK) {

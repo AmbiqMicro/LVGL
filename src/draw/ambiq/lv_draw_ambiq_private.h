@@ -52,12 +52,12 @@ extern "C" {
 #include "nema_programHW.h"
 
 #if LV_USE_AMBIQ_VG
+#include "nema_vg_context.h"
 #include "nema_vg.h"
 #include "nema_vg_paint.h"
 #include "nema_vg_path.h"
 #include "nema_vg_font.h"
 #include "nema_vg_tsvg.h"
-#include "nema_vg_context.h"
 #endif
 
 #include "gpu_patch.h"
@@ -135,9 +135,6 @@ typedef struct {
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
-
-extern uint32_t nema_enable_aa_flags(uint32_t aa);
-
 
 /**
  * Initialize the draw buffer handlers, see lv_ambiq_buffer.c.

@@ -158,7 +158,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
     const lv_draw_buf_t * mask_img = NULL;
     if(draw_dsc->bitmap_mask_src) {
 
-        lv_result_t res = lv_draw_ambiq_decode_image(draw_dsc->bitmap_mask_src, false, &mask_decoder_dsc, true);
+        res = lv_draw_ambiq_decode_image(draw_dsc->bitmap_mask_src, false, &mask_decoder_dsc, true);
         if(res != LV_RESULT_OK) {
             LV_LOG_WARN("MASK image decode failed. Drawing the image without mask.");
         }
@@ -180,7 +180,7 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
     uint32_t blend_op_mask = 0;
     if(mask_img) {
         bool do_multiply = (draw_dsc->header.cf == LV_COLOR_FORMAT_RGB565A8) ? true : false;
-        blend_op_mask = lv_draw_ambiq_bind_mask_texture(mask_img, true);
+        blend_op_mask = lv_draw_ambiq_bind_mask_texture(mask_img, do_multiply);
     }
 
 
