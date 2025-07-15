@@ -75,17 +75,17 @@ typedef struct {
 /**********************
  *  STATIC PROTOTYPES
  **********************/
+#if LV_USE_FREETYPE
+    static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * param);
 
-static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * param);
+    static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param);
 
-static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param);
+    static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline);
 
-static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline);
+    static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
 
-static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
-
-static void lv_draw_ambiq_vector_font_ft_cb(lv_event_t * e);
-
+    static void lv_draw_ambiq_vector_font_ft_cb(lv_event_t * e);
+#endif
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
