@@ -35,6 +35,8 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
+extern bool nema_buffer_is_within_pool(int pool, uint32_t buf_start, uint32_t buf_length);
+extern void nema_buffer_invalidate(nema_buffer_t * bo);
 
 /**********************
  *  STATIC VARIABLES
@@ -44,9 +46,7 @@
  *      MACROS
  **********************/
 
-/**********************
- *   GLOBAL FUNCTIONS
- **********************/
+
 
 static inline void * lv_draw_ambiq_buffer_malloc_core(uint32_t pool, size_t size, lv_color_format_t color_format)
 {
@@ -138,7 +138,7 @@ static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t
     }
     else {
         if(!lv_area_intersect(&a_clipped, a, &buf_area)) {
-            return LV_RESULT_INVALID;
+            return;
         }
     }
 
@@ -294,8 +294,9 @@ static void lv_draw_ambiq_buffer_invalidate_texture(const lv_draw_buf_t * draw_b
     lv_draw_ambiq_buffer_invalidate_core(NEMA_MEM_POOL_ASSETS, draw_buf, area);
 }
 
-
-
+/**********************
+ *   GLOBAL FUNCTIONS
+ **********************/
 void lv_draw_ambiq_init_buf_handlers(void)
 {
     default_handlers.buf_malloc_cb = lv_draw_ambiq_buffer_malloc;
