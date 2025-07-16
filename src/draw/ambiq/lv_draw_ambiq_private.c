@@ -111,8 +111,8 @@ static const error_map_t gpu_error_map[] = {
 
 static const char * interpret_error(const error_map_t * map, size_t size, uint32_t code)
 {
-    for (size_t i = 0; i < size; i++) {
-        if (map[i].code == code) {
+    for(size_t i = 0; i < size; i++) {
+        if(map[i].code == code) {
             return map[i].message;
         }
     }
@@ -376,7 +376,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         else if(LV_COLOR_FORMAT_IS_INDEXED(buf_dsc->header.cf)) {
             uint32_t palette_size;
 
-            switch (buf_dsc->header.cf) {
+            switch(buf_dsc->header.cf) {
                 case LV_COLOR_FORMAT_I1:
                     palette_size = 2;
                     des_format = NEMA_L1;
@@ -415,7 +415,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
     lv_draw_ambiq_nema_context_lock(unit);
 
     nema_cmdlist_t * cl = nema_cl_get_bound();
-    if (cl == NULL) {
+    if(cl == NULL) {
         nema_cl_rewind(&unit->cl);
         nema_cl_bind_sectored_circular(&unit->cl, LV_AMBIQ_COMMAND_LIST_SECTOR);
     }
@@ -428,7 +428,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         }
     }
     // If a GPU reset has just been executed, we need to clear the GPU context.
-    if (nema_get_last_cl_id() < 0 && nema_get_last_submission_id() == 0) {
+    if(nema_get_last_cl_id() < 0 && nema_get_last_submission_id() == 0) {
         lv_memset(&unit->des_buffer, 0, sizeof(lv_draw_buf_t));
         lv_memset(&unit->clip_area, 0, sizeof(lv_area_t));
         lv_ambiq_blend_mode_clear(unit);
@@ -467,7 +467,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
 lv_result_t lv_draw_ambiq_stencil_buffer_adjust(lv_draw_ambiq_unit_t * unit,
                                                 uint32_t width, uint32_t height)
 {
-    if (unit == NULL)
+    if(unit == NULL)
         unit = lv_draw_ambiq_get_default_unit();
 
     lv_draw_buf_t * stencil_buffer = unit->stencil_buffer;
@@ -568,11 +568,11 @@ lv_result_t lv_draw_ambiq_common_end(bool sync)
 
     // Check error
     uint32_t err = nema_get_error();
-    if (err != NEMA_ERR_NO_ERROR) {
+    if(err != NEMA_ERR_NO_ERROR) {
         LV_LOG_ERROR("NemaGFX error 0x%lx, %s\r\n", err, nema_raster_error_interpret(err));
     }
     err = nema_vg_get_error();
-    if (err != NEMA_VG_ERR_NO_ERROR) {
+    if(err != NEMA_VG_ERR_NO_ERROR) {
         LV_LOG_ERROR("NemaVG error: 0x%lx, %s\r\n", err, nema_vg_error_interpret(err));
     }
 

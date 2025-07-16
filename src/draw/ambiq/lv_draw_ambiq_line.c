@@ -220,13 +220,13 @@ void lv_draw_ambiq_line(lv_draw_task_t * t, const lv_draw_line_dsc_t * dsc)
     if(dsc->round_start && (dsc->width > 1)) {
 
 
-        nema_raster_stroked_arc_aa(x0, y0, w * 0.25f, w * 0.5f, 90.f+angle, 270.f + angle);
+        nema_raster_stroked_arc_aa(x0, y0, w * 0.25f, w * 0.5f, 90.f + angle, 270.f + angle);
     }
 
     if(dsc->round_end && (dsc->width > 1)) {
 
 
-        nema_raster_stroked_arc_aa(x1, y1, w * 0.25f, w * 0.5f, -90.f+angle, 90.f + angle);
+        nema_raster_stroked_arc_aa(x1, y1, w * 0.25f, w * 0.5f, -90.f + angle, 90.f + angle);
     }
 
 }

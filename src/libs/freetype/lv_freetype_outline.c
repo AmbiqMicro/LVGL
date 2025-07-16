@@ -354,7 +354,7 @@ static lv_freetype_outline_t outline_create(
     lv_freetype_outline_event_param_t param;
     lv_memzero(&param, sizeof(param));
 
-    lv_freetype_outline_t outline;
+    lv_freetype_outline_t outline = NULL;
 
 
 
@@ -429,11 +429,11 @@ https://stackoverflow.com/questions/3465809/how-to-interpret-a-freetype-glyph-ou
         res = outline_send_event(ctx, LV_EVENT_CREATE, &param);
         outline = param.outline;
 
-    if(res != LV_RESULT_OK || !outline) {
-        LV_LOG_ERROR("Outline object create failed");
-        LV_PROFILER_FONT_END;
-        return NULL;
-    }
+        if(res != LV_RESULT_OK || !outline) {
+            LV_LOG_ERROR("Outline object create failed");
+            LV_PROFILER_FONT_END;
+            return NULL;
+        }
 
         /* Run outline decompose again to fill outline data */
         error = FT_Outline_Decompose(&glyph_outline, &outline_funcs, outline);
