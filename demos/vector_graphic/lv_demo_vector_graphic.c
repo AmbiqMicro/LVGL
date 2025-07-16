@@ -277,8 +277,8 @@ void lv_demo_vector_graphic_not_buffered(void)
 
     LV_IMAGE_DECLARE(img_demo_vector_avatar);
 
-    lv_draw_buf_t* img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w, 
-    img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
+    lv_draw_buf_t * img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w,
+                                                                          img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
     memcpy(img_demo_vector_avatar_ssram_buf->data, img_demo_vector_avatar.data, img_demo_vector_avatar.data_size);
     lv_draw_buf_flush_cache(img_demo_vector_avatar_ssram_buf, NULL);
 
@@ -292,8 +292,8 @@ void lv_demo_vector_graphic_buffered(void)
 
     LV_IMAGE_DECLARE(img_demo_vector_avatar);
 
-    lv_draw_buf_t* img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w, 
-    img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
+    lv_draw_buf_t * img_demo_vector_avatar_ssram_buf = lv_draw_buf_create(img_demo_vector_avatar.header.w,
+                                                                          img_demo_vector_avatar.header.h, img_demo_vector_avatar.header.cf, img_demo_vector_avatar.header.stride);
     memcpy(img_demo_vector_avatar_ssram_buf->data, img_demo_vector_avatar.data, img_demo_vector_avatar.data_size);
     lv_draw_buf_flush_cache(img_demo_vector_avatar_ssram_buf, NULL);
 
