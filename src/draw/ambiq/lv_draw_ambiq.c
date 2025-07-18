@@ -137,15 +137,10 @@ void lv_draw_ambiq_init(void)
                    draw_ambiq_unit);
 #endif
 
-    // #ifndef NEMA_GFX_POWERSAVE
-    //     //Power on GPU
-    //     lv_result_t ret = lv_ambiq_nema_gpu_power_on();
-    //     if (ret != LV_RESULT_OK)
-    //     {
-    //         LV_LOG_ERROR("Ambiq GPU init failed!\n");
-    //         return ;
-    //     }
-    // #endif
+    if(!nema_sdk_initialized()) {
+        LV_LOG_ERROR("NemaSDK not initialized. Please initialize NemaSDK before LVGL init");
+    }
+
 }
 
 void lv_draw_ambiq_deinit(void)
