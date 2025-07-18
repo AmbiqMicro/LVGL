@@ -404,7 +404,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         return LV_RESULT_INVALID;
     }
 
-#if NEMA_GFX_POWERSAVE
+#if LV_AMBIQ_GPU_POWER_SAVE
     uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
         LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
@@ -556,6 +556,13 @@ lv_result_t lv_draw_ambiq_common_end(bool sync)
         nema_cl_submit(&unit->cl);
         nema_cl_wait(&unit->cl);
         nema_cl_unbind();
+#if LV_AMBIQ_GPU_POWER_SAVE
+        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
+        if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+            LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+            return LV_RESULT_INVALID;
+        }
+#endif
     }
 
     lv_draw_ambiq_nema_context_unlock(unit);
