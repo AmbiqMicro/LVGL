@@ -490,44 +490,31 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     int32_t sw_ori = sw;
     int32_t size = sw_ori  + r;
 
-    lv_area_t sh_area;
-    lv_area_copy(&sh_area, coords);
-    sh_area.x2 = sw / 2 + r - 1  - ((sw & 1) ? 0 : 1);
-    sh_area.y1 = sw / 2 + 1;
+#if LV_USE_AMBIQ_VG
+    lv_draw_ambiq_vg_start(size, size);
+    lv_draw_ambiq_unit_t * unit = lv_draw_ambiq_get_default_unit();
+    /*Draw corner shadow by VG*/
+    lv_ambiq_shadow_blur_corner_vg((float)size, (float)sw, (uint32_t *)sh_buf, unit->vg_paint, unit->vg_grad);
 
-    sh_area.x1 = sh_area.x2 - lv_area_get_width(coords);
-    sh_area.y2 = sh_area.y1 + lv_area_get_height(coords);
+    nema_cmdlist_t * cl = nema_cl_get_bound();
+    nema_cl_submit(cl);
+    nema_cl_wait(cl);
+    nema_cl_rewind(cl);
 
-    lv_draw_sw_mask_radius_param_t mask_param;
-    lv_draw_sw_mask_radius_init(&mask_param, &sh_area, r, false);
-
+#else
 #if SHADOW_ENHANCE
     /*Set half shadow width because blur will be repeated*/
     if(sw_ori == 1) sw = 1;
     else sw = sw_ori >> 1;
 #endif /*SHADOW_ENHANCE*/
 
-    int32_t y;
-    lv_opa_t * mask_line = lv_malloc(size);
-    LV_ASSERT_MALLOC(mask_line);
-    lv_opa_t * sh_ups_tmp_buf = (lv_opa_t *)sh_buf;
-    for(y = 0; y < size; y++) {
-        lv_memset(mask_line, 0xff, size);
-        lv_draw_sw_mask_res_t mask_res = mask_param.dsc.cb(mask_line, 0, y, size, &mask_param);
-        if(mask_res == LV_DRAW_SW_MASK_RES_TRANSP) {
-            lv_memzero(sh_ups_tmp_buf, size * sizeof(sh_ups_tmp_buf[0]));
-        }
-        else {
-            lv_memcpy(sh_ups_tmp_buf, mask_line, size);
-        }
-
-        sh_ups_tmp_buf += size;
-    }
-    lv_free(mask_line);
-
-    lv_draw_sw_mask_free_param(&mask_param);
+    lv_ambiq_create_corner_mask(size, sw, sh_buf);
 
     if(sw == 1) {
+        /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
+        *At this point, the blend mode must be updated to any valid state (or restore the previous one)
+        *to maintain correct global rendering behavior.*/
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
         return;
     }
 
@@ -540,28 +527,31 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     /*Bind tmp tex*/
     nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_ups_blur_buf->data, size + sw, size + sw, NEMA_A8, -1, NEMA_FILTER_PS);
 
+    /*Actual tests show that performing both horizontal and vertical blurs via GPU introduces a cumulative precision loss.*/
     lv_ambiq_shadow_blur_corner(size, sw, NEMA_TEX1, NEMA_TEX2);
 
 #if SHADOW_ENHANCE
     sw += sw_ori & 1;
     if(sw > 1) {
+        /*Actual tests show that performing both horizontal and vertical blurs via GPU introduces a cumulative precision loss.*/
         lv_ambiq_shadow_blur_corner(size, sw, NEMA_TEX1, NEMA_TEX2);
     }
 #endif
 
-    /*Run this GPU rendering before destroying the temporary buffer.*/
     nema_cmdlist_t * cl = nema_cl_get_bound();
     nema_cl_submit(cl);
     nema_cl_wait(cl);
     nema_cl_rewind(cl);
+
+    /*Destroy temp buffer*/
+    lv_draw_buf_destroy(sh_ups_blur_buf);
+#endif
 
     /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
      *At this point, the blend mode must be updated to any valid state (or restore the previous one)
      *to maintain correct global rendering behavior.*/
     lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
 
-    /*Destroy temp buffer*/
-    lv_draw_buf_destroy(sh_ups_blur_buf);
 }
 
 #endif /*LV_USE_DRAW_AMBIQ*/
