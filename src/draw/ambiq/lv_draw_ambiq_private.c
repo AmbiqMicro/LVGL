@@ -183,6 +183,15 @@ nema_tex_format_t lv_ambiq_color_format_map_src(lv_color_format_t lvgl_cf)
         case LV_COLOR_FORMAT_NEMA_TSC12A:
             return NEMA_TSC12A;
 
+        case LV_COLOR_FORMAT_ARGB1555:
+            return NEMA_ARGB1555;
+
+        case LV_COLOR_FORMAT_ARGB4444:
+            return NEMA_ARGB4444;
+
+        case LV_COLOR_FORMAT_ARGB2222:
+            return NEMA_ARGB2222;
+
         default:
             return COLOR_FORMAT_INVALID;
     }
@@ -209,14 +218,20 @@ nema_tex_format_t lv_ambiq_color_format_map_des(lv_color_format_t lvgl_cf)
         case LV_COLOR_FORMAT_AL88:
             return NEMA_AL88;
 
-        case LV_COLOR_FORMAT_A1:
-            return NEMA_L1;
-        case LV_COLOR_FORMAT_A2:
-            return NEMA_L2;
+        case LV_COLOR_FORMAT_ARGB1555:
+            return NEMA_ARGB1555;
+
+        case LV_COLOR_FORMAT_ARGB4444:
+            return NEMA_ARGB4444;
+
+        case LV_COLOR_FORMAT_ARGB2222:
+            return NEMA_ARGB2222;
+
         case LV_COLOR_FORMAT_A4:
-            return NEMA_L4;
+            return NEMA_A4;
+
         case LV_COLOR_FORMAT_A8:
-            return NEMA_L8;
+            return NEMA_A8;
 
         default:
             return COLOR_FORMAT_INVALID;
@@ -404,6 +419,9 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         return LV_RESULT_INVALID;
     }
 
+
+    lv_draw_ambiq_nema_context_lock(unit);
+
 #if LV_AMBIQ_GPU_POWER_SAVE
     uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
@@ -411,8 +429,6 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         return LV_RESULT_INVALID;
     }
 #endif
-
-    lv_draw_ambiq_nema_context_lock(unit);
 
     nema_cmdlist_t * cl = nema_cl_get_bound();
     if(cl == NULL) {
