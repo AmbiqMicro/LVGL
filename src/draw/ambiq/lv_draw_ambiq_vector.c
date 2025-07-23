@@ -626,6 +626,8 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
         nema_vg_draw_path(unit->vg_path, unit->vg_paint);
     }
 
+    lv_ambiq_blend_mode_clear(NULL);
+
     /* free the allocated memory*/
     nema_img_obj_t * ptr_img_obj;
     nema_img_obj_t * ptr_palette_obj;
