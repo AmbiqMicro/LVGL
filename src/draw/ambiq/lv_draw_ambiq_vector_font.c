@@ -54,6 +54,10 @@
     #include "../../libs/freetype/lv_freetype_private.h"
 #endif
 
+#if LV_USE_AMBIQ_TTF
+    #include "lv_ambiq_ttf.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -64,14 +68,16 @@
 /**********************
  *      TYPEDEFS
  **********************/
-static lv_array_t path_seg;
-static lv_array_t path_data;
-static NEMA_VG_PATH_HANDLE cur_path = NULL;
+#if LV_USE_FREETYPE
+    static lv_array_t path_seg;
+    static lv_array_t path_data;
+    static NEMA_VG_PATH_HANDLE cur_path = NULL;
+#endif
 
 typedef struct {
     NEMA_VG_PATH_HANDLE glyph_path;
     NEMA_VG_PATH_HANDLE glyph_border;
-} lv_ambiq_ft_glyph_t;
+} lv_ambiq_vector_glyph_t;
 
 /**********************
  *  STATIC PROTOTYPES
@@ -81,12 +87,14 @@ typedef struct {
 
     static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param);
 
-    static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline);
-
-    static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
+    static void lv_ambiq_ft_outline_destroy(lv_ambiq_vector_glyph_t * outline);
 
     static void lv_draw_ambiq_vector_font_ft_cb(lv_event_t * e);
 #endif
+
+static void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc,
+                                               float scale, lv_ambiq_vector_glyph_t * outline);
+
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
@@ -103,17 +111,38 @@ void lv_draw_ambiq_vector_font_init(lv_draw_unit_t * draw_unit)
 
 void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc)
 {
+
+    float scale = 0.f;
+    lv_ambiq_vector_glyph_t * outline = NULL;
+
 #if LV_USE_FREETYPE
     if(lv_freetype_is_outline_font(glyph_draw_dsc->g->resolved_font)) {
-        lv_draw_ambiq_vector_font_ft(t, glyph_draw_dsc);
+        scale = FT_F26DOT6_TO_PATH_SCALE(lv_freetype_outline_get_scale(glyph_draw_dsc->g->resolved_font));
+        outline = (lv_ambiq_vector_glyph_t *)glyph_draw_dsc->glyph_data;
     }
 #endif
+
+#if LV_USE_AMBIQ_TTF
+    lv_ambiq_vector_glyph_t outline_raw;
+    if(lv_ambiq_ttf_identify(glyph_draw_dsc->g->resolved_font)) {
+        scale = lv_ambiq_ttf_get_scale(glyph_draw_dsc->g->resolved_font);
+        outline_raw.glyph_path = (NEMA_VG_PATH_HANDLE)glyph_draw_dsc->glyph_data;
+        outline_raw.glyph_border = NULL;
+        outline = &outline_raw;
+    }
+#endif
+
+    lv_draw_ambiq_vector_font_internal(t, glyph_draw_dsc, scale, outline);
+
 }
 
-#if LV_USE_FREETYPE
 
-static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc)
+void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc, float scale,
+                                        lv_ambiq_vector_glyph_t * outline)
 {
+    if(scale < 1e-6) {
+        return;
+    }
 
     lv_area_t blend_area;
     if(!lv_area_intersect(&blend_area, glyph_draw_dsc->letter_coords, &t->clip_area))
@@ -121,14 +150,12 @@ static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t
 
     lv_draw_ambiq_unit_t * unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
 
-    lv_ambiq_ft_glyph_t * outline = (lv_ambiq_ft_glyph_t *)glyph_draw_dsc->glyph_data;
-
     nema_vg_set_blend(NEMA_BL_SRC_OVER);
 
     /*Calculate Path Matrix*/
     nema_matrix3x3_t matrix;
     lv_point_t pos = {glyph_draw_dsc->letter_coords->x1, glyph_draw_dsc->letter_coords->y1};
-    float scale = FT_F26DOT6_TO_PATH_SCALE(lv_freetype_outline_get_scale(glyph_draw_dsc->g->resolved_font));
+
     nema_mat3x3_load_identity(matrix);
 
     if(glyph_draw_dsc->rotation % 3600) {
@@ -158,7 +185,7 @@ static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t
     nema_vg_draw_path(outline->glyph_path, unit->vg_paint);
 
     // draw boarder
-    if(glyph_draw_dsc->outline_stroke_width > 0) {
+    if(glyph_draw_dsc->outline_stroke_width > 0 && outline->glyph_border) {
         nema_vg_set_fill_rule(NEMA_VG_STROKE);
 
         float stroke_width_in_object_space = ((float)glyph_draw_dsc->outline_stroke_width) / scale;
@@ -172,8 +199,12 @@ static void lv_draw_ambiq_vector_font_ft(lv_draw_task_t * t, lv_draw_glyph_dsc_t
         nema_vg_draw_path(outline->glyph_border, unit->vg_paint);
     }
 
+    lv_ambiq_blend_mode_clear(NULL);
+
     return;
 }
+
+#if LV_USE_FREETYPE
 
 static void lv_draw_ambiq_vector_font_ft_cb(lv_event_t * e)
 {
@@ -183,7 +214,7 @@ static void lv_draw_ambiq_vector_font_ft_cb(lv_event_t * e)
 
     switch(code) {
         case LV_EVENT_CREATE:
-            // Create the lv_ambiq_ft_glyph_t object and set the value
+            // Create the lv_ambiq_vector_glyph_t object and set the value
             lv_ambiq_ft_outline_alloc(param);
             break;
         case LV_EVENT_DELETE:
@@ -215,7 +246,7 @@ static inline void lv_ambiq_ft_data_array_push(int32_t x, int32_t y)
 static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * param)
 {
     LV_PROFILER_DRAW_BEGIN;
-    lv_ambiq_ft_glyph_t * outline = param->outline;
+    lv_ambiq_vector_glyph_t * outline = param->outline;
     LV_ASSERT_NULL(outline);
 
     lv_result_t res;
@@ -281,7 +312,7 @@ static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
     LV_PROFILER_DRAW_BEGIN;
 
     if(param->outline == NULL) {
-        lv_ambiq_ft_glyph_t * outline = lv_malloc(sizeof(lv_ambiq_ft_glyph_t));
+        lv_ambiq_vector_glyph_t * outline = lv_malloc(sizeof(lv_ambiq_vector_glyph_t));
         LV_ASSERT_MALLOC(outline);
 
         outline->glyph_path = nema_vg_path_create();
@@ -310,7 +341,7 @@ static void lv_ambiq_ft_outline_alloc(lv_freetype_outline_event_param_t * param)
     return;
 }
 
-static void lv_ambiq_ft_outline_destroy(lv_ambiq_ft_glyph_t * outline)
+static void lv_ambiq_ft_outline_destroy(lv_ambiq_vector_glyph_t * outline)
 {
     LV_PROFILER_DRAW_BEGIN;
     LV_ASSERT_NULL(outline);
