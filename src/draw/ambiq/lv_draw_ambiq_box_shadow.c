@@ -514,7 +514,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
         /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
         *At this point, the blend mode must be updated to any valid state (or restore the previous one)
         *to maintain correct global rendering behavior.*/
-        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
+        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, true);
         return;
     }
 
@@ -550,7 +550,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
      *At this point, the blend mode must be updated to any valid state (or restore the previous one)
      *to maintain correct global rendering behavior.*/
-    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
+    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, true);
 
 }
 
