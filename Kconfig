@@ -485,6 +485,43 @@ menu "LVGL configuration"
 			default 8
 			depends on LV_USE_DRAW_VG_LITE
 
+		config LV_USE_DRAW_AMBIQ
+			bool "Use Ambiq GPU"
+			default n
+			select LV_USE_MATRIX
+			select LV_USE_AMBIQ_VG
+
+		config LV_USE_AMBIQ_VG
+			bool "Use Ambiq vector graphics"
+			default n
+			depends on LV_USE_DRAW_AMBIQ
+
+		config LV_AMBIQ_CPU_GPU_ASYNC
+			bool "Make CPU and GPU work in asynchronous mode"
+			default n
+			depends on LV_USE_DRAW_AMBIQ
+
+		config LV_AMBIQ_GPU_POWER_SAVE
+			bool "Enable GPU power management, power off GPU at frame end."
+			default n
+			depends on LV_USE_DRAW_AMBIQ
+
+		config LV_AMBIQ_COMMAND_LIST_SECTOR
+			int "Command list sectors number"
+			default 100
+			depends on LV_USE_DRAW_AMBIQ
+			help
+				The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
+				where each sector has a fixed length of `LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE`
+
+		config LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE
+			int "Command list sector size in bytes"
+			default 1024
+			depends on LV_USE_DRAW_AMBIQ
+			help
+				The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
+				where each sector has a fixed length of `LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE`
+
 		config LV_USE_VECTOR_GRAPHIC
 			bool "Use Vector Graphic APIs"
 			default n
