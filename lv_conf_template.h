@@ -239,6 +239,22 @@
     #endif
 #endif
 
+/* Use ambiq's GPU on Apollo4x or Apollo5x chips. */
+#define LV_USE_DRAW_AMBIQ 0
+
+#if LV_USE_DRAW_AMBIQ
+#define LV_USE_AMBIQ_VG 0
+#define LV_AMBIQ_CPU_GPU_ASYNC 0
+#define LV_AMBIQ_GPU_POWER_SAVE 0
+
+
+/* The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
+ * where each sector has a fixed length of `LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE`.
+ */
+#define LV_AMBIQ_COMMAND_LIST_SECTOR 100
+#define LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE 1024
+#endif
+
 /** Use NXP's VG-Lite GPU on iMX RTxxx platforms. */
 #define LV_USE_DRAW_VGLITE 0
 
