@@ -93,7 +93,6 @@ struct ambiq_vg_font_t {
     font_stream_t stream;
     nema_font_header_t header;
     uint32_t * unicode_lookup_table;      // The ULT is always loaded into RAM.
-    nema_glyph_metadata_entry_t * metadata_table; // The GMT is also always loaded.
     lv_fs_file_t * file_handle_to_close; // If loaded from a file, this stores the handle for cleanup.
 };
 
@@ -112,11 +111,12 @@ static lv_result_t nema_font_load_from_stream(ambiq_vg_font_t * font)
         return LV_RESULT_INVALID;
     }
     if(font->header.magic != FONT_FILE_MAGIC) {
-        LV_LOG_ERROR("Invalid font file magic. Expected 0x%X, got 0x%X.", FONT_FILE_MAGIC, font->header.magic);
+        LV_LOG_ERROR("Invalid font file magic. Expected 0x%lX, got 0x%lX.", (unsigned long)FONT_FILE_MAGIC,
+                     (unsigned long)font->header.magic);
         return LV_RESULT_INVALID;
     }
     if(font->header.version != FONT_FILE_VERSION) {
-        LV_LOG_ERROR("Font version mismatch. Expected %d, got %d.", FONT_FILE_VERSION, font->header.version);
+        LV_LOG_ERROR("Font version mismatch. Expected %d, got %lu.", FONT_FILE_VERSION, (unsigned long)font->header.version);
         return LV_RESULT_INVALID;
     }
 
@@ -130,25 +130,6 @@ static lv_result_t nema_font_load_from_stream(ambiq_vg_font_t * font)
     if(font_stream_read(&font->stream, font->unicode_lookup_table, ult_size) != ult_size) {
         LV_LOG_ERROR("Failed to read Unicode table.");
         lv_free(font->unicode_lookup_table);
-        return LV_RESULT_INVALID;
-    }
-
-    size_t gmt_count = font->header.glyph_count + 1;
-    size_t gmt_size = gmt_count * sizeof(nema_glyph_metadata_entry_t);
-
-
-
-    font->metadata_table = (nema_glyph_metadata_entry_t *)am_mem_ssram_malloc(gmt_size);
-    if(!font->metadata_table) {
-        LV_LOG_ERROR("Failed to allocate memory for metadata table (%zu bytes).", gmt_size);
-        lv_free(font->unicode_lookup_table);
-        return LV_RESULT_INVALID;
-    }
-    font_stream_seek(&font->stream, font->header.gmt_offset);
-    if(font_stream_read(&font->stream, font->metadata_table, gmt_size) != gmt_size) {
-        LV_LOG_ERROR("Failed to read metadata table.");
-        lv_free(font->unicode_lookup_table);
-        lv_free(font->metadata_table);
         return LV_RESULT_INVALID;
     }
 
@@ -232,7 +213,6 @@ void nema_font_unload(ambiq_vg_font_t * font)
         lv_free(font->file_handle_to_close);
     }
     if(font->unicode_lookup_table) lv_free(font->unicode_lookup_table);
-    if(font->metadata_table) am_mem_ssram_free(font->metadata_table);
     lv_free(font);
 }
 
@@ -255,8 +235,8 @@ lv_result_t nema_font_get_metrics(const ambiq_vg_font_t * font, ambiq_vg_font_me
     return LV_RESULT_OK;
 }
 
-lv_result_t nema_font_get_glyph_metrics(ambiq_vg_font_t * font, uint32_t unicode,
-                                        ambiq_vg_glyph_metrics_t * metrics_out)
+lv_result_t nema_font_get_glyph_info(ambiq_vg_font_t * font, uint32_t unicode,
+                                     ambiq_vg_glyph_metrics_t * metrics_out)
 {
     if(!font || !metrics_out) return LV_RESULT_INVALID;
 
@@ -279,37 +259,45 @@ lv_result_t nema_font_get_glyph_metrics(ambiq_vg_font_t * font, uint32_t unicode
         return LV_RESULT_INVALID; // Not found
     }
 
-    const nema_glyph_metadata_entry_t * meta = &font->metadata_table[found_index];
+    // Read the metadata for the found glyph and the next one to calculate data length
+    nema_glyph_metadata_entry_t meta_entries[2];
+    size_t gmt_offset = font->header.gmt_offset + found_index * sizeof(nema_glyph_metadata_entry_t);
+    font_stream_seek(&font->stream, gmt_offset);
+    if(font_stream_read(&font->stream, meta_entries, sizeof(meta_entries)) != sizeof(meta_entries)) {
+        LV_LOG_ERROR("Failed to read glyph metadata for index %ld", (long)found_index);
+        return LV_RESULT_INVALID;
+    }
+
+    const nema_glyph_metadata_entry_t * meta = &meta_entries[0];
+    const nema_glyph_metadata_entry_t * next_meta = &meta_entries[1];
+
     metrics_out->xAdvance = meta->xAdvance;
     metrics_out->bbox_xmin = meta->bbox_xmin;
     metrics_out->bbox_ymin = meta->bbox_ymin;
     metrics_out->bbox_xmax = meta->bbox_xmax;
     metrics_out->bbox_ymax = meta->bbox_ymax;
     metrics_out->glyph_index = found_index;
+    metrics_out->glyph_data_offset = meta->geometry_offset;
+    metrics_out->glyph_data_length = next_meta->geometry_offset - meta->geometry_offset;
+
     return LV_RESULT_OK;
 }
 
-NEMA_VG_PATH_HANDLE nema_font_get_glyph_shape(ambiq_vg_font_t * font, uint32_t index)
+NEMA_VG_PATH_HANDLE nema_font_get_glyph_shape_from_info(ambiq_vg_font_t * font, uint32_t offset, uint32_t length)
 {
-    if(!font) {
-        LV_LOG_WARN("Invalid glyph_index: %d (glyph count is %d)", index, font->header.glyph_count);
+    if(!font || length == 0) {
         return NULL;
     }
 
-    const nema_glyph_metadata_entry_t * meta = &font->metadata_table[index];
-    const nema_glyph_metadata_entry_t * next_meta = &font->metadata_table[index + 1];
-    uint32_t glyph_data_length = next_meta->geometry_offset - meta->geometry_offset;
-    uint32_t glyph_data_offset = meta->geometry_offset;
-
-    void * geometry_block = lv_malloc(glyph_data_length);
+    void * geometry_block = lv_malloc(length);
     if(!geometry_block) {
-        LV_LOG_ERROR("Out of memory for geometry block (%zu bytes)", glyph_data_length);
+        LV_LOG_ERROR("Out of memory for geometry block (%lu bytes)", (unsigned long)length);
         return NULL;
     }
 
-    font_stream_seek(&font->stream, glyph_data_offset);
-    if(font_stream_read(&font->stream, geometry_block, glyph_data_length) != glyph_data_length) {
-        LV_LOG_ERROR("Failed to read geometry block for index %d", index);
+    font_stream_seek(&font->stream, offset);
+    if(font_stream_read(&font->stream, geometry_block, length) != length) {
+        LV_LOG_ERROR("Failed to read geometry block at offset %lu", (unsigned long)offset);
         lv_free(geometry_block);
         return NULL;
     }
