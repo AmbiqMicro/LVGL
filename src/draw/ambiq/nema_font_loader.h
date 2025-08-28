@@ -35,6 +35,8 @@ typedef struct {
     float    xAdvance;
     int16_t  bbox_xmin, bbox_ymin, bbox_xmax, bbox_ymax;
     uint32_t glyph_index;
+    uint32_t glyph_data_offset;
+    uint32_t glyph_data_length;
 } ambiq_vg_glyph_metrics_t;
 
 /** @brief A structure to hold the global, unscaled metrics of a font. */
@@ -95,16 +97,17 @@ lv_result_t nema_font_get_metrics(const ambiq_vg_font_t * font, ambiq_vg_font_me
  * @param[out] metrics_out A pointer to a structure to be filled with glyph metrics.
  * @return `LV_RESULT_OK` if the glyph is found, or `LV_RESULT_INVALID` if not.
  */
-lv_result_t nema_font_get_glyph_metrics(ambiq_vg_font_t * font, uint32_t unicode,
-                                        ambiq_vg_glyph_metrics_t * metrics_out);
+lv_result_t nema_font_get_glyph_info(ambiq_vg_font_t * font, uint32_t unicode,
+                                     ambiq_vg_glyph_metrics_t * metrics_out);
 
 /**
  * @brief Gets the renderable shape (path) for a single glyph (Performs I/O).
  * @param[in] font The loaded font handle.
- * @param[in] glyph_index The opaque index from `metrics_out->glyph_index`.
+ * @param[in] offset The offset of the glyph data in the font file.
+ * @param[in] length The length of the glyph data.
  * @return A valid `NEMA_VG_PATH_HANDLE` on success, or `NULL` on failure.
  */
-NEMA_VG_PATH_HANDLE nema_font_get_glyph_shape(ambiq_vg_font_t * font, uint32_t glyph_index);
+NEMA_VG_PATH_HANDLE nema_font_get_glyph_shape_from_info(ambiq_vg_font_t * font, uint32_t offset, uint32_t length);
 
 /**
  * @brief Frees a NEMA VG path object created by `nema_font_get_glyph_shape()`.
