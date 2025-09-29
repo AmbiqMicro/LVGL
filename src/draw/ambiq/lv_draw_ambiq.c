@@ -137,8 +137,44 @@ void lv_draw_ambiq_init(void)
                    draw_ambiq_unit);
 #endif
 
-    if(!nema_sdk_initialized()) {
-        LV_LOG_ERROR("NemaSDK not initialized. Please initialize NemaSDK before LVGL init");
+#if !LV_AMBIQ_GPU_POWER_SAVE
+    uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+    if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+        LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+    }
+#endif
+
+    // last_submission_id equals to -1 means the NemaSDK is not initialized.
+    if(nema_get_last_submission_id() == -1) {
+
+#if LV_AMBIQ_GPU_POWER_SAVE
+        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+        if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+            LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+        }
+#endif
+
+        /* Initialize the NemaGFX (raster graphics) SDK. */
+        nema_init();
+        if(NEMA_ERR_NO_ERROR != nema_get_error()) {
+            LV_LOG_ERROR("NemaGFX initialization failed!");
+        }
+
+#if LV_USE_AMBIQ_VG
+        /* Initialize the NemaVG (vector graphics) SDK. */
+        nema_buffer_t stencil_buffer = {.base_phys = 0, .base_virt = 0, .size = 0, .fd = 0};
+        nema_vg_init_stencil_prealloc(0, 0, stencil_buffer);
+        if(NEMA_VG_ERR_NO_ERROR != nema_vg_get_error()) {
+            LV_LOG_ERROR("NemaVG initialization failed!");
+        }
+#endif
+
+#if LV_AMBIQ_GPU_POWER_SAVE
+        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
+        if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+            LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+        }
+#endif
     }
 
 }
