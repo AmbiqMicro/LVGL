@@ -97,46 +97,6 @@ static lv_draw_ambiq_unit_t * draw_ambiq_unit = NULL;
 
 void lv_draw_ambiq_init(void)
 {
-    lv_draw_ambiq_init_buf_handlers();
-
-    draw_ambiq_unit = lv_draw_create_unit(sizeof(lv_draw_ambiq_unit_t));
-    draw_ambiq_unit->base_unit.dispatch_cb = dispatch;
-    draw_ambiq_unit->base_unit.evaluate_cb = evaluate;
-    draw_ambiq_unit->base_unit.delete_cb = LV_USE_OS ? lv_draw_ambiq_delete : NULL;
-    draw_ambiq_unit->base_unit.name = "AMBIQ";
-    draw_ambiq_unit->small_texture_buffer  = lv_draw_buf_create(64, 1, LV_COLOR_FORMAT_ARGB8888, 0);
-    draw_ambiq_unit->stencil_buffer = NULL;
-#if LV_USE_AMBIQ_VG
-    draw_ambiq_unit->vg_path = nema_vg_path_create();
-    draw_ambiq_unit->vg_paint = nema_vg_paint_create();
-    draw_ambiq_unit->vg_grad = nema_vg_grad_create();
-#endif
-
-    draw_ambiq_unit->blend_mode = 0;
-    draw_ambiq_unit->dst_tex = NEMA_NOTEX;
-    draw_ambiq_unit->fg_tex = NEMA_NOTEX;
-    draw_ambiq_unit->bg_tex = NEMA_NOTEX;
-
-    lv_memset(&draw_ambiq_unit->des_buffer, 0, sizeof(lv_draw_buf_t));
-    lv_memset(&draw_ambiq_unit->clip_area, 0, sizeof(lv_area_t));
-
-    draw_ambiq_unit->cl = nema_cl_create_sized(LV_AMBIQ_COMMAND_LIST_SECTOR * LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE);
-    LV_ASSERT_NULL(draw_ambiq_unit->cl.bo.base_virt);
-
-    //    lv_ll_init(&draw_ambiq_unit->inserted_cl_ll, sizeof(nema_cmdlist_t));
-
-    draw_ambiq_unit->nema_context_lock_count = 0;
-
-#ifdef LV_USE_AMBIQ_VG
-    lv_draw_ambiq_vector_font_init((lv_draw_unit_t *)draw_ambiq_unit);
-#endif
-
-#if LV_USE_OS
-    lv_mutex_init(&draw_ambiq_unit->mutex_nema_context);
-    lv_thread_init(&draw_ambiq_unit->thread, "ambiqdraw", LV_THREAD_PRIO_HIGH, render_thread_cb, LV_DRAW_THREAD_STACK_SIZE,
-                   draw_ambiq_unit);
-#endif
-
 #if !LV_AMBIQ_GPU_POWER_SAVE
     uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
@@ -177,6 +137,45 @@ void lv_draw_ambiq_init(void)
 #endif
     }
 
+    lv_draw_ambiq_init_buf_handlers();
+
+    draw_ambiq_unit = lv_draw_create_unit(sizeof(lv_draw_ambiq_unit_t));
+    draw_ambiq_unit->base_unit.dispatch_cb = dispatch;
+    draw_ambiq_unit->base_unit.evaluate_cb = evaluate;
+    draw_ambiq_unit->base_unit.delete_cb = LV_USE_OS ? lv_draw_ambiq_delete : NULL;
+    draw_ambiq_unit->base_unit.name = "AMBIQ";
+    draw_ambiq_unit->small_texture_buffer  = lv_draw_buf_create(64, 1, LV_COLOR_FORMAT_ARGB8888, 0);
+    draw_ambiq_unit->stencil_buffer = NULL;
+#if LV_USE_AMBIQ_VG
+    draw_ambiq_unit->vg_path = nema_vg_path_create();
+    draw_ambiq_unit->vg_paint = nema_vg_paint_create();
+    draw_ambiq_unit->vg_grad = nema_vg_grad_create();
+#endif
+
+    draw_ambiq_unit->blend_mode = 0;
+    draw_ambiq_unit->dst_tex = NEMA_NOTEX;
+    draw_ambiq_unit->fg_tex = NEMA_NOTEX;
+    draw_ambiq_unit->bg_tex = NEMA_NOTEX;
+
+    lv_memset(&draw_ambiq_unit->des_buffer, 0, sizeof(lv_draw_buf_t));
+    lv_memset(&draw_ambiq_unit->clip_area, 0, sizeof(lv_area_t));
+
+    draw_ambiq_unit->cl = nema_cl_create_sized(LV_AMBIQ_COMMAND_LIST_SECTOR * LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE);
+    LV_ASSERT_NULL(draw_ambiq_unit->cl.bo.base_virt);
+
+    //    lv_ll_init(&draw_ambiq_unit->inserted_cl_ll, sizeof(nema_cmdlist_t));
+
+    draw_ambiq_unit->nema_context_lock_count = 0;
+
+#ifdef LV_USE_AMBIQ_VG
+    lv_draw_ambiq_vector_font_init((lv_draw_unit_t *)draw_ambiq_unit);
+#endif
+
+#if LV_USE_OS
+    lv_mutex_init(&draw_ambiq_unit->mutex_nema_context);
+    lv_thread_init(&draw_ambiq_unit->thread, "ambiqdraw", LV_THREAD_PRIO_HIGH, render_thread_cb, LV_DRAW_THREAD_STACK_SIZE,
+                   draw_ambiq_unit);
+#endif
 }
 
 void lv_draw_ambiq_deinit(void)
