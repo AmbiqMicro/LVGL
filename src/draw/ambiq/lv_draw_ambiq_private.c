@@ -338,13 +338,13 @@ static lv_result_t lv_draw_ambiq_nema_context_unlock(lv_draw_ambiq_unit_t * unit
 {
 #if LV_USE_OS
     LV_ASSERT_MSG(unit != NULL, "Ambiq GPU draw unit is not initialized!");
+
+    unit->nema_context_lock_count --;
+    LV_ASSERT_MSG(unit->nema_context_lock_count == 0, "Ambiq GPU mutex lock count error!");
+
     lv_result_t res = lv_mutex_unlock(&unit->mutex_nema_context);
     if(res != LV_RESULT_OK) {
         LV_LOG_ERROR("Ambiq GPU mutex unlock failed!");
-    }
-    else {
-        unit->nema_context_lock_count --;
-        LV_ASSERT_MSG(unit->nema_context_lock_count == 0, "Ambiq GPU mutex lock count error!");
     }
     return res;
 #else
@@ -425,6 +425,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
 #if LV_AMBIQ_GPU_POWER_SAVE
     uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+        lv_draw_ambiq_nema_context_unlock(unit);
         LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
         return LV_RESULT_INVALID;
     }
@@ -438,6 +439,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
     else {
         if(cl != &unit->cl) {
             // should never come here
+            nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
             lv_draw_ambiq_nema_context_unlock(unit);
             LV_LOG_ERROR("Unexpected command list in the context!\r\n");
             return LV_RESULT_INVALID;
