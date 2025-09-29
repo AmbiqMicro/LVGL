@@ -208,6 +208,9 @@ lv_result_t lv_draw_ambiq_vg_start(uint32_t width, uint32_t height);
 void lv_draw_ambiq_vector_font_init(lv_draw_unit_t * draw_unit);
 void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc);
 
+void lv_draw_ambiq_display_buffer_sync(lv_draw_buf_t * target_buffer,
+                                       const lv_area_t * area,
+                                       void * src, lv_color_format_t cf);
 /***********************
  * GLOBAL VARIABLES
  ***********************/

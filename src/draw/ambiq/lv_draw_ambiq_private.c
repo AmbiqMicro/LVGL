@@ -799,4 +799,49 @@ nema_tex_format_t lv_ambiq_glyph_format_convert(lv_font_glyph_format_t format)
 
     return nema_format;
 }
+
+void lv_draw_ambiq_display_buffer_sync(lv_draw_buf_t * target_buffer,
+                                       const lv_area_t * area,
+                                       void * src, lv_color_format_t cf)
+{
+    lv_area_t display_buffer_area = {0, 0, target_buffer->header.w - 1, target_buffer->header.h - 1};
+    if(area == NULL) {
+        area = (const lv_area_t *)&display_buffer_area;
+    }
+
+    int32_t w = lv_area_get_width(area);
+    int32_t h = lv_area_get_height(area);
+    if((w <= 0) || (h <= 0))
+        return;
+
+    nema_tex_format_t nema_format = lv_ambiq_color_format_map_src(cf);
+    if(nema_format == COLOR_FORMAT_INVALID) {
+        LV_LOG_ERROR("Unsupported format!");
+        return;
+    }
+
+    lv_result_t ret = lv_draw_ambiq_common_start(target_buffer, area, false);
+    if(ret != LV_RESULT_OK) {
+        return;
+    }
+
+
+    //Set blend mode
+    lv_ambiq_set_blend_blit(NULL, NEMA_BL_SRC);
+
+    //Bind source buffer
+    nema_bind_src_tex((uintptr_t)src,
+                      w,
+                      h,
+                      nema_format,
+                      -1,
+                      NEMA_FILTER_PS);
+
+    //Blit
+    nema_blit_rect(area->x1, area->y1, w, h);
+
+    lv_draw_ambiq_common_end(true);
+
+    return;
+}
 #endif
