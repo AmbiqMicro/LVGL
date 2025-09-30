@@ -594,11 +594,11 @@ lv_result_t lv_draw_ambiq_common_end(bool sync)
     // Check error
     uint32_t err = nema_get_error();
     if(err != NEMA_ERR_NO_ERROR) {
-        LV_LOG_ERROR("NemaGFX error 0x%lx, %s\r\n", err, nema_raster_error_interpret(err));
+        LV_LOG_ERROR("NemaGFX error 0x%x, %s\r\n", err, nema_raster_error_interpret(err));
     }
     err = nema_vg_get_error();
     if(err != NEMA_VG_ERR_NO_ERROR) {
-        LV_LOG_ERROR("NemaVG error: 0x%lx, %s\r\n", err, nema_vg_error_interpret(err));
+        LV_LOG_ERROR("NemaVG error: 0x%x, %s\r\n", err, nema_vg_error_interpret(err));
     }
 
     return LV_RESULT_OK;
