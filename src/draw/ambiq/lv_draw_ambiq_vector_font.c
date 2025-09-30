@@ -140,7 +140,7 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
 void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc, float scale,
                                         lv_ambiq_vector_glyph_t * outline)
 {
-    if(scale < 1e-6) {
+    if(scale < 1e-6f) {
         return;
     }
 
