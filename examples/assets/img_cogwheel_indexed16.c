@@ -10,7 +10,8 @@
     #define LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16
 #endif
 
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16 uint8_t img_cogwheel_indexed16_map[] = {
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16 uint8_t
+img_cogwheel_indexed16_map[] = {
     0x00, 0x00, 0x00, 0x00,   /*Color of index 0*/
     0x6c, 0x5e, 0x4a, 0xff,   /*Color of index 1*/
     0x72, 0x64, 0x50, 0xff,   /*Color of index 2*/
