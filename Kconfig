@@ -392,7 +392,7 @@ menu "LVGL configuration"
 			bool "Enable VGLite asserts"
 			depends on LV_USE_DRAW_VGLITE
 			default n
-			
+
 		config LV_USE_VGLITE_CHECK_ERROR
 			bool "Enable VGLite error checks"
 			depends on LV_USE_DRAW_VGLITE
@@ -515,6 +515,16 @@ menu "LVGL configuration"
 		config LV_AMBIQ_GPU_POWER_SAVE
 			bool "Enable GPU power management, power off GPU at frame end."
 			default n
+			depends on LV_USE_DRAW_AMBIQ
+
+		config LV_USE_AMBIQ_TTF
+			bool "Enable Ambiq TTF solution, it will offer better performance and less memory occupation."
+			default n
+			depends on LV_USE_DRAW_AMBIQ
+
+		config LV_AMBIQ_TTF_CACHE_SIZE
+			int "Ambiq TTF cache entry size"
+			default 512
 			depends on LV_USE_DRAW_AMBIQ
 
 		config LV_AMBIQ_COMMAND_LIST_SECTOR

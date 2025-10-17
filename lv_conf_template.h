@@ -257,6 +257,10 @@
 #define LV_USE_AMBIQ_VG 0
 #define LV_AMBIQ_CPU_GPU_ASYNC 0
 #define LV_AMBIQ_GPU_POWER_SAVE 0
+#define LV_USE_AMBIQ_TTF 0
+
+/*Set the cache size for Ambiq TTF fonts. (in number of glyphs)*/
+#define LV_AMBIQ_TTF_CACHE_SIZE 512
 
 
 /* The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
@@ -1344,10 +1348,10 @@
 #if LV_BUILD_DEMOS
     /** Show some widgets. This might be required to increase `LV_MEM_SIZE`. */
     #define LV_USE_DEMO_WIDGETS 0
-    
+
     /** Demonstrate usage of encoder and keyboard. */
     #define LV_USE_DEMO_KEYPAD_AND_ENCODER 0
-    
+
     /** Benchmark your system */
     #define LV_USE_DEMO_BENCHMARK 0
 
@@ -1359,10 +1363,10 @@
     /** Render test for each primitive.
      *  - Requires at least 480x272 display. */
     #define LV_USE_DEMO_RENDER 0
-    
+
     /** Stress test for LVGL */
     #define LV_USE_DEMO_STRESS 0
-    
+
     /** Music player demo */
     #define LV_USE_DEMO_MUSIC 0
     #if LV_USE_DEMO_MUSIC
@@ -1372,38 +1376,38 @@
         #define LV_DEMO_MUSIC_LARGE     0
         #define LV_DEMO_MUSIC_AUTO_PLAY 0
     #endif
-    
+
     /** Vector graphic demo */
     #define LV_USE_DEMO_VECTOR_GRAPHIC  0
-    
+
     /*---------------------------
      * Demos from lvgl/lv_demos
       ---------------------------*/
-    
+
     /** Flex layout demo */
     #define LV_USE_DEMO_FLEX_LAYOUT     0
-    
+
     /** Smart-phone like multi-language demo */
     #define LV_USE_DEMO_MULTILANG       0
-    
+
     /** Widget transformation demo */
     #define LV_USE_DEMO_TRANSFORM       0
-    
+
     /** Demonstrate scroll settings */
     #define LV_USE_DEMO_SCROLL          0
-    
+
     /*E-bike demo with Lottie animations (if LV_USE_LOTTIE is enabled)*/
     #define LV_USE_DEMO_EBIKE           0
     #if LV_USE_DEMO_EBIKE
         #define LV_DEMO_EBIKE_PORTRAIT  0    /*0: for 480x270..480x320, 1: for 480x800..720x1280*/
     #endif
-    
+
     /** High-resolution demo */
     #define LV_USE_DEMO_HIGH_RES        0
-    
+
     /* Smart watch demo */
     #define LV_USE_DEMO_SMARTWATCH      0
-#endif /* LV_BUILD_DEMOS */ 
+#endif /* LV_BUILD_DEMOS */
 
 /*--END OF LV_CONF_H--*/
 
