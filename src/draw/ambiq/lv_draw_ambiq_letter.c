@@ -181,10 +181,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
             case LV_FONT_GLYPH_FORMAT_A3:
             case LV_FONT_GLYPH_FORMAT_A4:
             case LV_FONT_GLYPH_FORMAT_A8:
-            case LV_FONT_GLYPH_FORMAT_A1_ALIGNED:
-            case LV_FONT_GLYPH_FORMAT_A2_ALIGNED:
-            case LV_FONT_GLYPH_FORMAT_A4_ALIGNED:
-            case LV_FONT_GLYPH_FORMAT_A8_ALIGNED:
 
                 const lv_font_t * font = glyph_draw_dsc->g->resolved_font;
                 lv_font_fmt_txt_dsc_t * fdsc = (lv_font_fmt_txt_dsc_t *)font->dsc;
@@ -195,7 +191,7 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 
                 bool is_plain = false;
                 if(font->get_glyph_bitmap == lv_font_get_bitmap_fmt_txt) {
-                    if(fdsc->bitmap_format == LV_FONT_FMT_TXT_PLAIN || fdsc->bitmap_format == LV_FONT_FMT_PLAIN_ALIGNED) {
+                    if(fdsc->bitmap_format == LV_FONT_FMT_TXT_PLAIN) {
                         is_plain = true;
                     }
                 }
@@ -234,11 +230,11 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 
                 if(is_plain) {
                     g->req_raw_bitmap = 1;
-                    glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(g, NULL);
+                    glyph_draw_dsc->glyph_data = font->get_glyph_bitmap(g, NULL);
 
                     ambiq_draw_bitmap_glyph.nema_format = lv_ambiq_glyph_format_convert(g->format);
                     ambiq_draw_bitmap_glyph.bitmap = glyph_draw_dsc->glyph_data;
-                    ambiq_draw_bitmap_glyph.aligned = (fdsc->bitmap_format == LV_FONT_FMT_PLAIN_ALIGNED);
+                    ambiq_draw_bitmap_glyph.stride = g->stride;
                     lv_ambiq_draw_bitmap_glyph(&ambiq_draw_bitmap_glyph);
 
                     if(ambiq_draw_bitmap_glyph.temp_buffer_used) {
@@ -256,7 +252,7 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
 
                     ambiq_draw_bitmap_glyph.nema_format = NEMA_A8;
                     ambiq_draw_bitmap_glyph.bitmap = (void *)glyph_draw_dsc->_draw_buf->data;
-                    ambiq_draw_bitmap_glyph.aligned = false;
+                    ambiq_draw_bitmap_glyph.stride = 0;
                     lv_ambiq_draw_bitmap_glyph(&ambiq_draw_bitmap_glyph);
                     cpu_gpu_sync = true;
                 }

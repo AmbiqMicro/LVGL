@@ -777,19 +777,15 @@ nema_tex_format_t lv_ambiq_glyph_format_convert(lv_font_glyph_format_t format)
     nema_tex_format_t nema_format;
     switch(format) {
         case LV_FONT_GLYPH_FORMAT_A1:
-        case LV_FONT_GLYPH_FORMAT_A1_ALIGNED:
             nema_format = NEMA_A1;
             break;
         case LV_FONT_GLYPH_FORMAT_A2:
-        case LV_FONT_GLYPH_FORMAT_A2_ALIGNED:
             nema_format = NEMA_A2;
             break;
         case LV_FONT_GLYPH_FORMAT_A4:
-        case LV_FONT_GLYPH_FORMAT_A4_ALIGNED:
             nema_format = NEMA_A4;
             break;
         case LV_FONT_GLYPH_FORMAT_A8:
-        case LV_FONT_GLYPH_FORMAT_A8_ALIGNED:
             nema_format = NEMA_A8;
             break;
         default:

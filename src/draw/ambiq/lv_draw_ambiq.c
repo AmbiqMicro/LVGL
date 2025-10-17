@@ -97,8 +97,10 @@ static lv_draw_ambiq_unit_t * draw_ambiq_unit = NULL;
 
 void lv_draw_ambiq_init(void)
 {
+    uint32_t hal_ret = AM_HAL_STATUS_SUCCESS;
+
 #if !LV_AMBIQ_GPU_POWER_SAVE
-    uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+    hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
     if(hal_ret != AM_HAL_STATUS_SUCCESS) {
         LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
     }
@@ -108,7 +110,7 @@ void lv_draw_ambiq_init(void)
     if(nema_get_last_submission_id() == -1) {
 
 #if LV_AMBIQ_GPU_POWER_SAVE
-        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+        hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
         if(hal_ret != AM_HAL_STATUS_SUCCESS) {
             LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
         }
@@ -130,7 +132,7 @@ void lv_draw_ambiq_init(void)
 #endif
 
 #if LV_AMBIQ_GPU_POWER_SAVE
-        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
+        hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
         if(hal_ret != AM_HAL_STATUS_SUCCESS) {
             LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
         }
@@ -173,7 +175,7 @@ void lv_draw_ambiq_init(void)
 
 #if LV_USE_OS
     lv_mutex_init(&draw_ambiq_unit->mutex_nema_context);
-    lv_thread_init(&draw_ambiq_unit->thread, "ambiqdraw", LV_THREAD_PRIO_HIGH, render_thread_cb, LV_DRAW_THREAD_STACK_SIZE,
+    lv_thread_init(&draw_ambiq_unit->thread, "ambiqdraw", LV_DRAW_THREAD_PRIO, render_thread_cb, LV_DRAW_THREAD_STACK_SIZE,
                    draw_ambiq_unit);
 #endif
 }
@@ -345,6 +347,7 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
 
+#if LV_USE_VECTOR_GRAPHIC
         case LV_DRAW_TASK_TYPE_VECTOR:
 #if LV_USE_AMBIQ_VG
             task->preference_score = 10;
@@ -353,6 +356,8 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             return 0;
 #endif
             break;
+#endif
+
         default:
             break;
     }
@@ -517,12 +522,15 @@ static void execute_drawing(lv_draw_task_t * t)
         case LV_DRAW_TASK_TYPE_LAYER:
             lv_draw_ambiq_layer(t, t->draw_dsc, &t->area);
             break;
-        case LV_DRAW_TASK_TYPE_VECTOR:
+
 #if LV_USE_VECTOR_GRAPHIC
+        case LV_DRAW_TASK_TYPE_VECTOR:
+#if LV_USE_AMBIQ_VG
             lv_draw_ambiq_vg_start(draw_buf->header.w, draw_buf->header.h);
             lv_draw_ambiq_vector(t, t->draw_dsc);
 #endif
             break;
+#endif
 
         default:
             break;
