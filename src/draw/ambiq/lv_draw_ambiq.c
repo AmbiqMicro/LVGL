@@ -99,22 +99,13 @@ void lv_draw_ambiq_init(void)
 {
     uint32_t hal_ret = AM_HAL_STATUS_SUCCESS;
 
-#if !LV_AMBIQ_GPU_POWER_SAVE
-    hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
-    if(hal_ret != AM_HAL_STATUS_SUCCESS) {
-        LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
-    }
-#endif
-
     // last_submission_id equals to -1 means the NemaSDK is not initialized.
     if(nema_get_last_submission_id() == -1) {
 
-#if LV_AMBIQ_GPU_POWER_SAVE
-        hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+        hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, false);
         if(hal_ret != AM_HAL_STATUS_SUCCESS) {
             LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
         }
-#endif
 
         /* Initialize the NemaGFX (raster graphics) SDK. */
         nema_init();
@@ -130,14 +121,19 @@ void lv_draw_ambiq_init(void)
             LV_LOG_ERROR("NemaVG initialization failed!");
         }
 #endif
+    }
 
 #if LV_AMBIQ_GPU_POWER_SAVE
-        hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
-        if(hal_ret != AM_HAL_STATUS_SUCCESS) {
-            LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
-        }
-#endif
+    hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
+    if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+        LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
     }
+#else
+    hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_WAKE, true);
+    if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+        LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+    }
+#endif
 
     lv_draw_ambiq_init_buf_handlers();
 
