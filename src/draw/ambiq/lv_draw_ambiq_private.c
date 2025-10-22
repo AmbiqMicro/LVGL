@@ -166,6 +166,9 @@ nema_tex_format_t lv_ambiq_color_format_map_src(lv_color_format_t lvgl_cf)
         case LV_COLOR_FORMAT_RGB888:
             return NEMA_BGR24;
 
+        case LV_COLOR_FORMAT_BGR888:
+            return NEMA_RGB24;
+
         case LV_COLOR_FORMAT_ARGB8888:
             return NEMA_BGRA8888;
 
@@ -205,6 +208,9 @@ nema_tex_format_t lv_ambiq_color_format_map_des(lv_color_format_t lvgl_cf)
 
         case LV_COLOR_FORMAT_RGB888:
             return NEMA_BGR24;
+
+        case LV_COLOR_FORMAT_BGR888:
+            return NEMA_RGB24;
 
         case LV_COLOR_FORMAT_ARGB8888:
             return NEMA_BGRA8888;
