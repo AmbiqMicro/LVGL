@@ -73,8 +73,6 @@ extern "C" {
 #include "nema_math.h"
 #include "nema_core.h"
 #include "nema_regs.h"
-#include "nema_utils.h"
-#include "nema_event.h"
 #include "nema_raster.h"
 #include "nema_graphics.h"
 #include "nema_provisional.h"
