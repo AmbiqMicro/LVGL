@@ -108,7 +108,7 @@ void lv_draw_ambiq_triangle(lv_draw_task_t * t, const lv_draw_triangle_dsc_t * d
     uint32_t blending_mode;
 
     if(layer->color_format == LV_COLOR_FORMAT_ARGB8888) {
-        blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
+        blending_mode = NEMA_BL_SRC_OVER;
     }
     else {
         blending_mode = NEMA_BL_SIMPLE;

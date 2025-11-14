@@ -233,8 +233,8 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
             blending_mode = NEMA_BL_ADD;
             break;
         default:
-            if(draw_dsc->header.cf == LV_COLOR_FORMAT_ARGB8888) {
-                blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
+            if((layer->color_format == LV_COLOR_FORMAT_ARGB8888) && (draw_dsc->header.cf == LV_COLOR_FORMAT_ARGB8888)) {
+                blending_mode = NEMA_BL_SRC_OVER;
             }
             else if(draw_dsc->header.cf == LV_COLOR_FORMAT_ARGB8888_PREMULTIPLIED) {
                 blending_mode = NEMA_BL_SRC_OVER;

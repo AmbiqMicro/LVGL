@@ -98,7 +98,7 @@ void lv_draw_ambiq_border(lv_draw_task_t * t, const lv_draw_border_dsc_t * dsc, 
     uint32_t blending_mode;
 
     if(t->target_layer->color_format == LV_COLOR_FORMAT_ARGB8888) {
-        blending_mode = NEMA_BL_SRC_OVER | NEMA_BLOP_SRC_PREMULT;
+        blending_mode = NEMA_BL_SRC_OVER;
     }
     else {
         blending_mode = NEMA_BL_SIMPLE;
