@@ -58,6 +58,8 @@
     #include "lv_ambiq_ttf.h"
 #endif
 
+#include "am_debug_pin.h"
+
 /*********************
  *      DEFINES
  *********************/
@@ -140,6 +142,9 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
 void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_draw_dsc, float scale,
                                         lv_ambiq_vector_glyph_t * outline)
 {
+
+    AM_DEBUG_PIN_SET(DEBUG_PIN_5);
+
     if(scale < 1e-6f) {
         return;
     }
@@ -200,6 +205,8 @@ void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t 
     }
 
     lv_ambiq_blend_mode_clear(NULL);
+
+    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
 
     return;
 }

@@ -14,9 +14,11 @@
 #include "gpu_patch.h"
 #include "am_mem.h"
 
+#include "am_debug_pin.h"
+
 // --- Defines ---
 #define FONT_FILE_MAGIC 0x4E464F4E
-#define FONT_FILE_VERSION 5
+#define FONT_FILE_VERSION 6
 
 // --- I/O Stream Abstraction ---
 
@@ -289,26 +291,54 @@ NEMA_VG_PATH_HANDLE nema_font_get_glyph_shape_from_info(ambiq_vg_font_t * font, 
         return NULL;
     }
 
-    void * geometry_block = lv_malloc(length);
-    if(!geometry_block) {
-        LV_LOG_ERROR("Out of memory for geometry block (%lu bytes)", (unsigned long)length);
+    void * temp_block = lv_malloc(length);
+    if(!temp_block) {
+        LV_LOG_ERROR("Out of memory for temp geometry block (%lu bytes)", (unsigned long)length);
         return NULL;
     }
 
     font_stream_seek(&font->stream, offset);
-    if(font_stream_read(&font->stream, geometry_block, length) != length) {
+    if(font_stream_read(&font->stream, temp_block, length) != length) {
         LV_LOG_ERROR("Failed to read geometry block at offset %lu", (unsigned long)offset);
-        lv_free(geometry_block);
+        lv_free(temp_block);
         return NULL;
     }
 
-    uint32_t data_len_bytes = *((uint32_t *)geometry_block);
-    uint32_t seg_len_bytes = *(((uint32_t *)geometry_block) + 1);
+    uint32_t coord_count = *((uint32_t *)temp_block);
+    uint32_t seg_len_bytes = *(((uint32_t *)temp_block) + 1);
+
+    uint32_t float_data_len_bytes = coord_count * sizeof(float);
+    uint32_t final_length = 8 + float_data_len_bytes + seg_len_bytes;
+
+    void * geometry_block = lv_malloc(final_length);
+    if(!geometry_block) {
+        LV_LOG_ERROR("Out of memory for geometry block (%lu bytes)", (unsigned long)final_length);
+        lv_free(temp_block);
+        return NULL;
+    }
+
+    *((uint32_t *)geometry_block) = float_data_len_bytes;
+    *(((uint32_t *)geometry_block) + 1) = seg_len_bytes;
+
     float * coords_ptr = (float *)((char *)geometry_block + 8);
-    uint8_t * segments_ptr = (uint8_t *)((char *)geometry_block + 8 + data_len_bytes);
+    uint8_t * segments_ptr = (uint8_t *)((char *)geometry_block + 8 + float_data_len_bytes);
+
+    if(coord_count > 0) {
+        int16_t * src_coords = (int16_t *)((char *)temp_block + 8);
+        for(uint32_t i = 0; i < coord_count; ++i) {
+            coords_ptr[i] = (float)src_coords[i];
+        }
+    }
+
+    if(seg_len_bytes > 0) {
+        uint8_t * src_segments = (uint8_t *)((char *)temp_block + 8 + coord_count * sizeof(int16_t));
+        memcpy(segments_ptr, src_segments, seg_len_bytes);
+    }
+
+    lv_free(temp_block);
 
     NEMA_VG_PATH_HANDLE path = nema_vg_path_create();
-    nema_vg_path_set_shape(path, seg_len_bytes, segments_ptr, data_len_bytes / sizeof(float), coords_ptr);
+    nema_vg_path_set_shape(path, seg_len_bytes, segments_ptr, coord_count, coords_ptr);
     return path;
 }
 
@@ -341,8 +371,13 @@ static size_t font_stream_read(font_stream_t * stream, void * data, size_t to_re
         size_t remaining_bytes = stream->src.buffer_src.size - stream->src.buffer_src.position;
         size_t actual_read_size = (to_read > remaining_bytes) ? remaining_bytes : to_read;
         if(actual_read_size > 0) {
+
+            AM_DEBUG_PIN_SET(DEBUG_PIN_6);
+
             memcpy(data, (const uint8_t *)stream->src.buffer_src.data + stream->src.buffer_src.position, actual_read_size);
             stream->src.buffer_src.position += actual_read_size;
+
+            AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
         }
         return actual_read_size;
     }
