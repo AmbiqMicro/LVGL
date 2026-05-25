@@ -54,11 +54,11 @@
     #include "../../libs/freetype/lv_freetype_private.h"
 #endif
 
-#if LV_USE_AMBIQ_TTF
-    #include "lv_ambiq_ttf.h"
+#if 0
+    #if LV_USE_AMBIQ_TTF
+        #include "lv_ambiq_ttf.h"
+    #endif
 #endif
-
-#include "am_debug_pin.h"
 
 /*********************
  *      DEFINES
@@ -124,6 +124,7 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
     }
 #endif
 
+#if 0
 #if LV_USE_AMBIQ_TTF
     lv_ambiq_vector_glyph_t outline_raw;
     if(lv_ambiq_ttf_identify(glyph_draw_dsc->g->resolved_font)) {
@@ -132,6 +133,7 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
         outline_raw.glyph_border = NULL;
         outline = &outline_raw;
     }
+#endif
 #endif
 
     lv_draw_ambiq_vector_font_internal(t, glyph_draw_dsc, scale, outline);
@@ -143,7 +145,7 @@ void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t 
                                         lv_ambiq_vector_glyph_t * outline)
 {
 
-    AM_DEBUG_PIN_SET(DEBUG_PIN_5);
+
 
     if(scale < 1e-6f) {
         return;
@@ -206,7 +208,7 @@ void lv_draw_ambiq_vector_font_internal(lv_draw_task_t * t, lv_draw_glyph_dsc_t 
 
     lv_ambiq_blend_mode_clear(NULL);
 
-    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
+
 
     return;
 }

@@ -45,11 +45,9 @@
 #include "../lv_draw_private.h"
 #if LV_USE_DRAW_AMBIQ
 
-#include "../../core/lv_refr.h"
 #include "lv_draw_ambiq.h"
 #include "lv_draw_ambiq_private.h"
 #include "../lv_draw_image_private.h"
-#include "../../display/lv_display_private.h"
 #include "../../stdlib/lv_string.h"
 #include "../../core/lv_global.h"
 
