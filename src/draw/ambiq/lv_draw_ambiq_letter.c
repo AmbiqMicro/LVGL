@@ -43,6 +43,7 @@
  *      INCLUDES
  *********************/
 #include "../lv_draw_label_private.h"
+#include "am_debug_pin.h"
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
 
@@ -56,6 +57,8 @@
 #include "../../core/lv_refr_private.h"
 #include "../../stdlib/lv_string.h"
 #include "../../font/lv_font_fmt_txt.h"
+
+#include "am_debug_pin.h"
 
 /*********************
  *      DEFINES
@@ -135,6 +138,9 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                                                  lv_draw_fill_dsc_t * fill_draw_dsc, const lv_area_t * fill_area)
 {
 
+
+    AM_DEBUG_PIN_SET(DEBUG_PIN_5);
+
     lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
     lv_layer_t * layer = t->target_layer;
 
@@ -183,20 +189,19 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
             case LV_FONT_GLYPH_FORMAT_A8:
 
                 const lv_font_t * font = glyph_draw_dsc->g->resolved_font;
-                lv_font_fmt_txt_dsc_t * fdsc = (lv_font_fmt_txt_dsc_t *)font->dsc;
+
                 lv_font_glyph_dsc_t * g = glyph_draw_dsc->g;
 
                 lv_area_copy(&raster_coords, glyph_draw_dsc->letter_coords);
                 lv_area_move(&raster_coords, -layer->buf_area.x1, -layer->buf_area.y1);
 
-                bool is_plain = false;
+                bool is_plain = lv_font_has_static_bitmap(font);
                 if(font->get_glyph_bitmap == lv_font_get_bitmap_fmt_txt) {
-                    if(fdsc->bitmap_format == LV_FONT_FMT_TXT_PLAIN) {
+                    lv_font_fmt_txt_dsc_t * fdsc = (lv_font_fmt_txt_dsc_t *)font->dsc;
+
+                    if((fdsc->bitmap_format == LV_FONT_FMT_TXT_PLAIN) && (glyph_draw_dsc->format != LV_FONT_GLYPH_FORMAT_A3)) {
                         is_plain = true;
                     }
-                }
-                if(glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_A3) {
-                    is_plain = false;
                 }
 
                 // set color and blend mode
@@ -309,6 +314,9 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
         nema_cl_wait(current_cl);
         nema_cl_rewind(current_cl);
     }
+
+
+    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
 }
 
 #endif /*LV_USE_DRAW_AMBIQ*/
