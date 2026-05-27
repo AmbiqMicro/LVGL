@@ -331,15 +331,15 @@ lv_draw_buf_t * lv_draw_buf_create_ex(const lv_draw_buf_handlers_t * handlers, u
 
     uint32_t size = _calculate_draw_buf_size(w, h, cf, stride);
 
-    // void * buf = draw_buf_malloc(handlers, size, cf);
-    // /*Do not assert here as LVGL or the app might just want to try creating a draw_buf*/
-    // if(buf == NULL) {
-    //     LV_LOG_WARN("No memory: %"LV_PRIu32"x%"LV_PRIu32", cf: %d, stride: %"LV_PRIu32", %"LV_PRIu32"Byte, ",
-    //                 w, h, cf, stride, size);
-    //     lv_free(draw_buf);
-    //     LV_PROFILER_DRAW_END;
-    //     return NULL;
-    // }
+    void * buf = draw_buf_malloc(handlers, size, cf);
+    /*Do not assert here as LVGL or the app might just want to try creating a draw_buf*/
+    if(buf == NULL) {
+        LV_LOG_WARN("No memory: %"LV_PRIu32"x%"LV_PRIu32", cf: %d, stride: %"LV_PRIu32", %"LV_PRIu32"Byte, ",
+                    w, h, cf, stride, size);
+        lv_free(draw_buf);
+        LV_PROFILER_DRAW_END;
+        return NULL;
+    }
 
     draw_buf->header.w = w;
     draw_buf->header.h = h;
@@ -347,8 +347,8 @@ lv_draw_buf_t * lv_draw_buf_create_ex(const lv_draw_buf_handlers_t * handlers, u
     draw_buf->header.flags = LV_IMAGE_FLAGS_MODIFIABLE | LV_IMAGE_FLAGS_ALLOCATED;
     draw_buf->header.stride = stride;
     draw_buf->header.magic = LV_IMAGE_HEADER_MAGIC;
-    // draw_buf->data = lv_draw_buf_align(buf, cf);
-    // draw_buf->unaligned_data = buf;
+    draw_buf->data = lv_draw_buf_align_ex(handlers, buf, cf);
+    draw_buf->unaligned_data = buf;
     draw_buf->data_size = size;
     draw_buf->handlers = handlers;
     LV_PROFILER_DRAW_END;
