@@ -522,11 +522,6 @@ menu "LVGL configuration"
 			default n
 			depends on LV_USE_DRAW_AMBIQ
 
-		config LV_AMBIQ_TTF_CACHE_SIZE
-			int "Ambiq TTF cache entry size"
-			default 512
-			depends on LV_USE_DRAW_AMBIQ
-
 		config LV_AMBIQ_COMMAND_LIST_SECTOR
 			int "Command list sectors number"
 			default 100

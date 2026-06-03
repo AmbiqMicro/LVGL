@@ -259,9 +259,6 @@
 #define LV_AMBIQ_GPU_POWER_SAVE 0
 #define LV_USE_AMBIQ_TTF 0
 
-/*Set the cache size for Ambiq TTF fonts. (in number of glyphs)*/
-#define LV_AMBIQ_TTF_CACHE_SIZE 512
-
 
 /* The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
  * where each sector has a fixed length of `LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE`.

@@ -740,15 +740,6 @@
     #endif
 #endif
 
-/*Set the cache size for Ambiq TTF fonts. (in number of glyphs)*/
-#ifndef LV_AMBIQ_TTF_CACHE_SIZE
-    #ifdef CONFIG_LV_AMBIQ_TTF_CACHE_SIZE
-        #define LV_AMBIQ_TTF_CACHE_SIZE CONFIG_LV_AMBIQ_TTF_CACHE_SIZE
-    #else
-        #define LV_AMBIQ_TTF_CACHE_SIZE 512
-    #endif
-#endif
-
 
 /* The command list is divided into `LV_AMBIQ_COMMAND_LIST_SECTOR` sectors,
  * where each sector has a fixed length of `LV_AMBIQ_COMMAND_LIST_SECTOR_SIZE`.
