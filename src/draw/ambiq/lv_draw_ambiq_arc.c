@@ -121,12 +121,15 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
     int32_t center_x = dsc->center.x - layer->buf_area.x1;
     int32_t center_y = dsc->center.y - layer->buf_area.y1;
 
-    lv_image_decoder_dsc_t decoder_dsc;
+    lv_image_decoder_dsc_t * decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
+    LV_ASSERT_MALLOC(decoder_dsc);
+    if(!decoder_dsc) return;
+
     const lv_draw_buf_t * bg_img = NULL;
     if(dsc->img_src) {
-        lv_result_t res = lv_draw_ambiq_decode_image(dsc->img_src, false, &decoder_dsc, false);
+        lv_result_t res = lv_draw_ambiq_decode_image(dsc->img_src, false, decoder_dsc, false);
         if(res == LV_RESULT_OK) {
-            bg_img = decoder_dsc.decoded;
+            bg_img = decoder_dsc->decoded;
         }
         else {
             LV_LOG_ERROR("Failed to decode image");
@@ -187,14 +190,11 @@ void lv_draw_ambiq_arc(lv_draw_task_t * t, const lv_draw_arc_dsc_t * dsc, const 
     }
 
     if(bg_img) {
-        nema_cmdlist_t * cl = nema_cl_get_bound();
-        nema_cl_submit(cl);
-        nema_cl_wait(cl);
-        nema_cl_rewind(cl);
-
-        lv_image_decoder_close(&decoder_dsc);
+        nema_gc_add(decoder_dsc, (void(*)(void *))_lv_ambiq_decoder_close_and_free);
     }
-
+    else {
+        lv_free(decoder_dsc);
+    }
 
     return;
 

@@ -43,6 +43,7 @@
  *      INCLUDES
  *********************/
 #include "lv_draw_ambiq.h"
+#include "nema_sys_defs.h"
 
 #if LV_USE_DRAW_AMBIQ
 
@@ -452,7 +453,7 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
         }
     }
     // If a GPU reset has just been executed, we need to clear the GPU context.
-    if(nema_get_last_cl_id() < 0 && nema_get_last_submission_id() == 0) {
+    if(nema_get_last_cl_id() < 0 && nema_get_last_submission_id() < 0) {
         lv_memset(&unit->des_buffer, 0, sizeof(lv_draw_buf_t));
         lv_memset(&unit->clip_area, 0, sizeof(lv_area_t));
         lv_ambiq_blend_mode_clear(unit);
@@ -513,11 +514,7 @@ lv_result_t lv_draw_ambiq_stencil_buffer_adjust(lv_draw_ambiq_unit_t * unit,
                                                               height, 0);
 
         if(reshaped_buffer == NULL) {
-#if LV_AMBIQ_CPU_GPU_ASYNC
-#error "Under development! Define this macro to 0 to work in sync mode."
-#else
-            lv_draw_buf_destroy(unit->stencil_buffer);
-#endif
+            nema_gc_add(unit->stencil_buffer, (void(*)(void *))lv_draw_buf_destroy);
             unit->stencil_buffer = lv_draw_buf_create(width, height, LV_COLOR_FORMAT_A8, 0);
 
         }
@@ -576,9 +573,12 @@ lv_result_t lv_draw_ambiq_common_end(bool sync)
 {
     lv_draw_ambiq_unit_t * unit = lv_draw_ambiq_get_default_unit();
 
+    nema_gc_run();
+
     if(sync) {
         nema_cl_submit(&unit->cl);
         nema_cl_wait(&unit->cl);
+        nema_gc_reset();
         nema_cl_unbind();
 #if LV_AMBIQ_GPU_POWER_SAVE
         uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
@@ -845,5 +845,13 @@ void lv_draw_ambiq_display_buffer_sync(lv_draw_buf_t * target_buffer,
     lv_draw_ambiq_common_end(true);
 
     return;
+}
+
+void _lv_ambiq_decoder_close_and_free(lv_image_decoder_dsc_t * dsc)
+{
+    if(dsc) {
+        lv_image_decoder_close(dsc);
+        lv_free(dsc);
+    }
 }
 #endif

@@ -177,39 +177,43 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
     uint32_t recolor_rgba = lv_ambiq_color_convert(draw_dsc->recolor, draw_dsc->recolor_opa);
 
     // decode and bind the image texture
-    lv_image_decoder_dsc_t decoder_dsc;
-    lv_result_t res = lv_draw_ambiq_decode_image(draw_dsc->src, transformed, &decoder_dsc, false);
+    lv_image_decoder_dsc_t * decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
+    if(!decoder_dsc) return;
+
+    lv_result_t res = lv_draw_ambiq_decode_image(draw_dsc->src, transformed, decoder_dsc, false);
     if(res != LV_RESULT_OK) {
         LV_LOG_ERROR("Failed to open image");
+        lv_free(decoder_dsc);
         return;
     }
 
     // bind the image texture
     uint32_t color_rgba = lv_ambiq_color_convert(draw_dsc->recolor, draw_dsc->opa);
-    uint32_t blend_op_tex = lv_draw_ambiq_bind_image_texture(decoder_dsc.decoded, color_rgba, tex_wrap_mode);
+    uint32_t blend_op_tex = lv_draw_ambiq_bind_image_texture(decoder_dsc->decoded, color_rgba, tex_wrap_mode);
 
     // decode the mask texture
-    lv_image_decoder_dsc_t mask_decoder_dsc;
+    lv_image_decoder_dsc_t * mask_decoder_dsc = NULL;
     bool need_release_mask_decoder = false;
     const lv_draw_buf_t * mask_img = NULL;
     if(draw_dsc->bitmap_mask_src) {
-
-        res = lv_draw_ambiq_decode_image(draw_dsc->bitmap_mask_src, false, &mask_decoder_dsc, true);
-        if(res != LV_RESULT_OK) {
-            LV_LOG_WARN("MASK image decode failed. Drawing the image without mask.");
-        }
-        else {
-            if((mask_decoder_dsc.decoded->header.w == draw_dsc->header.w) &&
-               (mask_decoder_dsc.decoded->header.h == draw_dsc->header.h)) {
-                mask_img = mask_decoder_dsc.decoded;
+        mask_decoder_dsc = lv_malloc(sizeof(lv_image_decoder_dsc_t));
+        if(mask_decoder_dsc) {
+            res = lv_draw_ambiq_decode_image(draw_dsc->bitmap_mask_src, false, mask_decoder_dsc, true);
+            if(res != LV_RESULT_OK) {
+                LV_LOG_WARN("MASK image decode failed. Drawing the image without mask.");
             }
             else {
-                LV_LOG_WARN("GPU limitation, mask size should be same as the texture size or the framebuffer size! draw it without mask.");
+                if((mask_decoder_dsc->decoded->header.w == draw_dsc->header.w) &&
+                   (mask_decoder_dsc->decoded->header.h == draw_dsc->header.h)) {
+                    mask_img = mask_decoder_dsc->decoded;
+                }
+                else {
+                    LV_LOG_WARN("GPU limitation, mask size should be same as the texture size or the framebuffer size! draw it without mask.");
+                }
+
+                need_release_mask_decoder = true;
             }
-
-            need_release_mask_decoder = true;
         }
-
     }
 
     // bind the mask image
@@ -381,14 +385,12 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
         nema_enable_aa_flags(prev_aa);
     }
 
-    nema_cmdlist_t * current_cl = nema_cl_get_bound();
-    nema_cl_submit(current_cl);
-    nema_cl_wait(current_cl);
-    nema_cl_rewind(current_cl);
-
-    lv_image_decoder_close(&decoder_dsc);
+    nema_gc_add(decoder_dsc, (void(*)(void *))_lv_ambiq_decoder_close_and_free);
     if(need_release_mask_decoder) {
-        lv_image_decoder_close(&mask_decoder_dsc);
+        nema_gc_add(mask_decoder_dsc, (void(*)(void *))_lv_ambiq_decoder_close_and_free);
+    }
+    else {
+        if(mask_decoder_dsc) lv_free(mask_decoder_dsc);
     }
 
 }

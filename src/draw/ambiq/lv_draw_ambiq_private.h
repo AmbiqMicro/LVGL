@@ -171,8 +171,10 @@ typedef struct {
  **********************/
 
 /**
- * Initialize the draw buffer handlers, see lv_ambiq_buffer.c.
+ * Initialize the draw buffer handlers,
+ * Create a draw unit for ambiq GFX.
  */
+void lv_draw_ambiq_init(void);
 void lv_draw_ambiq_init_buf_handlers(void);
 
 
@@ -209,6 +211,8 @@ void lv_draw_ambiq_vector_font(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_d
 void lv_draw_ambiq_display_buffer_sync(lv_draw_buf_t * target_buffer,
                                        const lv_area_t * area,
                                        void * src, lv_color_format_t cf);
+
+void _lv_ambiq_decoder_close_and_free(lv_image_decoder_dsc_t * dsc);
 /***********************
  * GLOBAL VARIABLES
  ***********************/

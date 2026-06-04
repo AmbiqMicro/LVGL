@@ -45,6 +45,7 @@ typedef struct {
 typedef struct {
     uint32_t glyph_index;
     lv_draw_buf_t * bitmap;
+    int cl_id;
 } bitmap_cache_node_t;
 
 typedef struct {
@@ -298,12 +299,21 @@ static bool adapter_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t
 
     float scale = dsc->scale;
     dsc_out->adv_w = (uint16_t)roundf(glyph_info.xAdvance * scale);
-    dsc_out->box_w = (uint16_t)roundf((glyph_info.bbox_xmax - glyph_info.bbox_xmin) * scale) + 2;
-    dsc_out->box_h = (uint16_t)roundf((glyph_info.bbox_ymax - glyph_info.bbox_ymin) * scale) + 2;
-    dsc_out->ofs_x = (int16_t)roundf(glyph_info.bbox_xmin * scale) - 1;
-    dsc_out->ofs_y = (int16_t)roundf(glyph_info.bbox_ymin * scale) - 1;
+
+    if(glyph_info.bbox_xmax > glyph_info.bbox_xmin && glyph_info.bbox_ymax > glyph_info.bbox_ymin) {
+        dsc_out->box_w = (uint16_t)roundf((glyph_info.bbox_xmax - glyph_info.bbox_xmin) * scale) + 2;
+        dsc_out->box_h = (uint16_t)roundf((glyph_info.bbox_ymax - glyph_info.bbox_ymin) * scale) + 2;
+        dsc_out->ofs_x = (int16_t)roundf(glyph_info.bbox_xmin * scale) - 1;
+        dsc_out->ofs_y = (int16_t)roundf(glyph_info.bbox_ymin * scale) - 1;
+    }
+    else {
+        dsc_out->box_w = 0;
+        dsc_out->box_h = 0;
+        dsc_out->ofs_x = 0;
+        dsc_out->ofs_y = 0;
+    }
     dsc_out->format = LV_FONT_GLYPH_FORMAT_A8;
-    dsc_out->is_placeholder = 0;
+    dsc_out->is_placeholder = (glyph_info.glyph_index == 0) ? 1 : 0;
     dsc_out->outline_stroke_width = 0;
     dsc_out->gid.index = glyph_info.glyph_index;
 
@@ -352,6 +362,10 @@ static void adapter_release_glyph_cb(const lv_font_t * font, lv_font_glyph_dsc_t
         return;
     }
     adapter_ctx_t * dsc = (adapter_ctx_t *)font->dsc;
+
+    bitmap_cache_node_t * cache_data = lv_cache_entry_get_data(g_dsc->entry);
+    cache_data->cl_id = nema_get_last_submission_id() + 1;
+
     lv_cache_release(dsc->bitmap_cache, g_dsc->entry, NULL);
     g_dsc->entry = NULL;
 }
@@ -389,6 +403,7 @@ static bool bitmap_cache_create_cb(bitmap_cache_node_t * node, void * user_data)
 
     phys_font_free_path(path);
     node->bitmap = bitmap_buffer;
+    node->cl_id = -1;
 
     return true;
 }
@@ -397,7 +412,12 @@ static void bitmap_cache_free_cb(bitmap_cache_node_t * node, void * user_data)
 {
     LV_UNUSED(user_data);
     if(node->bitmap) {
-        lv_draw_buf_destroy(node->bitmap);
+        if(nema_get_last_cl_id() >= node->cl_id) {
+            lv_draw_buf_destroy(node->bitmap);
+        }
+        else {
+            nema_gc_add(node->bitmap, (void (*)(void *))lv_draw_buf_destroy);
+        }
     }
 }
 

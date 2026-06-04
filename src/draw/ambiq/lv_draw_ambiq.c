@@ -138,6 +138,9 @@ void lv_draw_ambiq_init(void)
     draw_ambiq_unit = lv_draw_create_unit(sizeof(lv_draw_ambiq_unit_t));
     draw_ambiq_unit->base_unit.dispatch_cb = dispatch;
     draw_ambiq_unit->base_unit.evaluate_cb = evaluate;
+#if LV_AMBIQ_CPU_GPU_ASYNC == 1
+    draw_ambiq_unit->base_unit.wait_for_finish_cb = wait_for_finish;
+#endif
     draw_ambiq_unit->base_unit.delete_cb = LV_USE_OS ? lv_draw_ambiq_delete : NULL;
     draw_ambiq_unit->base_unit.name = "AMBIQ";
     draw_ambiq_unit->small_texture_buffer  = lv_draw_buf_create(64, 1, LV_COLOR_FORMAT_ARGB8888, 0);
@@ -470,7 +473,7 @@ static void execute_drawing(lv_draw_task_t * t)
 
     /* If GPU and CPU work in async mode, software rendering pipeline will not be used,
     draw buffer will only be accessed by GPU, no cache flush is needed. */
-#if LV_AMBIQ_CPU_GPU_ASYNC==0
+#if LV_USE_DRAW_SW == 1
     /* Flush the drawing area */
     lv_draw_buf_flush_cache(draw_buf, &draw_area);
 #endif
@@ -534,11 +537,42 @@ static void execute_drawing(lv_draw_task_t * t)
     lv_draw_ambiq_common_end(false);
 #else
     lv_draw_ambiq_common_end(true);
+#endif
+
+#if LV_USE_DRAW_SW == 1
     lv_draw_buf_invalidate_cache(draw_buf, &draw_area);
 #endif
 
     LV_PROFILER_DRAW_END;
 }
+
+#if LV_AMBIQ_CPU_GPU_ASYNC == 1
+static int32_t wait_for_finish(lv_draw_unit_t * draw_unit)
+{
+    lv_draw_ambiq_unit_t * unit = (lv_draw_ambiq_unit_t *) draw_unit;
+
+    lv_draw_ambiq_nema_context_lock(unit);
+
+    if(nema_cl_get_bound() == &unit->cl) {
+
+        nema_cl_submit(&unit->cl);
+        nema_cl_wait(&unit->cl);
+        nema_gc_reset();
+        nema_cl_unbind();
+
+#if LV_AMBIQ_GPU_POWER_SAVE
+        uint32_t hal_ret = nemagfx_power_control(AM_HAL_SYSCTRL_DEEPSLEEP, true);
+        if(hal_ret != AM_HAL_STATUS_SUCCESS) {
+            LV_LOG_ERROR("Power control failed: %d\r\n", hal_ret);
+        }
+#endif
+    }
+
+    lv_draw_ambiq_nema_context_unlock(unit);
+
+    return 1;
+}
+#endif
 
 lv_draw_ambiq_unit_t * lv_draw_ambiq_get_default_unit(void)
 {
