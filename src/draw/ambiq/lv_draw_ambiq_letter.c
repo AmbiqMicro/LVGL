@@ -247,7 +247,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                     }
                 }
                 else {
-                    LV_LOG_WARN("CPU GPU sync required for compressed bitmap, Slow down the performance!");
                     g->req_raw_bitmap = 0;
                     glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(glyph_draw_dsc->g, glyph_draw_dsc->_draw_buf);
                     if(glyph_draw_dsc->glyph_data == NULL) {
@@ -309,10 +308,8 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
     }
 
     if(cpu_gpu_sync) {
-        nema_cmdlist_t * current_cl = nema_cl_get_bound();
-        nema_cl_submit(current_cl);
-        nema_cl_wait(current_cl);
-        nema_cl_rewind(current_cl);
+        nema_gc_add(glyph_draw_dsc->_draw_buf, (void(*)(void *))lv_draw_buf_destroy);
+        glyph_draw_dsc->_draw_buf = NULL;
     }
 
 

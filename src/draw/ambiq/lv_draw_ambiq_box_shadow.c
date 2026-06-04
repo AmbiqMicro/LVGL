@@ -45,6 +45,7 @@
 #include "../../misc/lv_area_private.h"
 #include "../lv_draw_private.h"
 #include "lv_draw_ambiq.h"
+#include "src/draw/lv_draw_buf.h"
 
 #if LV_USE_DRAW_AMBIQ
 
@@ -74,7 +75,7 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static void shadow_draw_corner_buf(const lv_area_t * coords, lv_opa_t * sh_buf, int32_t s,
+static void shadow_draw_corner_buf(const lv_area_t * coords, lv_draw_buf_t * sh_buf, int32_t s,
                                    int32_t r);
 
 /**********************
@@ -140,12 +141,12 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     /*Get how many pixels are affected by the blur on the corners*/
     int32_t corner_size = dsc->width  + r_sh;
 
-    lv_opa_t * sh_buf;
+    lv_draw_buf_t * sh_buf = lv_draw_buf_create_ex(&(LV_GLOBAL_DEFAULT()->font_draw_buf_handlers), corner_size,
+                                                   corner_size,
+                                                   LV_COLOR_FORMAT_L8, corner_size);
 
-
-    sh_buf = lv_malloc(corner_size * corner_size);
     LV_ASSERT_MALLOC(sh_buf);
-    shadow_draw_corner_buf(&core_area, (lv_opa_t *)sh_buf, dsc->width, r_sh);
+    shadow_draw_corner_buf(&core_area, sh_buf, dsc->width, r_sh);
 
     /*Skip a lot of masking if the background will cover the shadow that would be masked out*/
     bool simple = dsc->bg_cover;
@@ -168,7 +169,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     /* stencil buffer to hold the shadow */
     lv_result_t res = lv_draw_ambiq_stencil_buffer_adjust(unit, layer_buf_width, layer_buf_width);
     if(res != LV_RESULT_OK) {
-        lv_free(sh_buf);
+        lv_draw_buf_destroy(sh_buf);
         return;
     }
 
@@ -177,10 +178,10 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
                   unit->stencil_buffer->header.h, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /* bind the blurred corner buffer to TEX2*/
-    nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_buf, corner_size, corner_size, NEMA_A8, -1, NEMA_FILTER_PS);
+    nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_buf->data, corner_size, corner_size, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /* set the blend mode to SRC*/
-    lv_ambiq_blend_mode_change(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, false);
+    lv_ambiq_blend_mode_change(unit, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, true);
 
     nema_set_clip_temp(0, 0, layer_buf_width, layer_buf_height);
 
@@ -465,12 +466,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     nema_raster_rect(shadow_area.x1 - layer_buf_start_x, shadow_area.y1 - layer_buf_start_y,
                      lv_area_get_width(&shadow_area), lv_area_get_height(&shadow_area));
 
-    nema_cmdlist_t * cl = nema_cl_get_bound();
-    nema_cl_submit(cl);
-    nema_cl_wait(cl);
-    nema_cl_rewind(cl);
-
-    lv_free(sh_buf);
+    nema_gc_add(sh_buf, (void(*)(void *))lv_draw_buf_destroy);
 }
 
 /**********************
@@ -484,7 +480,7 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
  * @param sw shadow width
  * @param r radius
  */
-static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coords, lv_opa_t * sh_buf, int32_t sw,
+static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coords, lv_draw_buf_t * sh_buf, int32_t sw,
                                                          int32_t r)
 {
     int32_t sw_ori = sw;
@@ -494,12 +490,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     lv_draw_ambiq_vg_start(size, size);
     lv_draw_ambiq_unit_t * unit = lv_draw_ambiq_get_default_unit();
     /*Draw corner shadow by VG*/
-    lv_ambiq_shadow_blur_corner_vg((float)size, (float)sw, (uint32_t *)sh_buf, unit->vg_paint, unit->vg_grad);
-
-    nema_cmdlist_t * cl = nema_cl_get_bound();
-    nema_cl_submit(cl);
-    nema_cl_wait(cl);
-    nema_cl_rewind(cl);
+    lv_ambiq_shadow_blur_corner_vg((float)size, (float)sw, (uint32_t *)sh_buf->data, unit->vg_paint, unit->vg_grad);
 
 #else
 #if SHADOW_ENHANCE
@@ -508,13 +499,9 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     else sw = sw_ori >> 1;
 #endif /*SHADOW_ENHANCE*/
 
-    lv_ambiq_create_corner_mask(size, sw, sh_buf);
+    lv_ambiq_create_corner_mask(size, sw, sh_buf->data);
 
     if(sw == 1) {
-        /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
-        *At this point, the blend mode must be updated to any valid state (or restore the previous one)
-        *to maintain correct global rendering behavior.*/
-        lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, true);
         return;
     }
 
@@ -522,7 +509,7 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     lv_draw_buf_t * sh_ups_blur_buf = lv_draw_buf_create(size + sw, size + sw, LV_COLOR_FORMAT_A8, 0);
 
     /*Bind src tex*/
-    nema_bind_tex(NEMA_TEX1, (uintptr_t)sh_buf, size, size, NEMA_A8, -1, NEMA_FILTER_PS);
+    nema_bind_tex(NEMA_TEX1, (uintptr_t)sh_buf->data, size, size, NEMA_A8, -1, NEMA_FILTER_PS);
 
     /*Bind tmp tex*/
     nema_bind_tex(NEMA_TEX2, (uintptr_t)sh_ups_blur_buf->data, size + sw, size + sw, NEMA_A8, -1, NEMA_FILTER_PS);
@@ -538,19 +525,9 @@ static void LV_ATTRIBUTE_FAST_MEM shadow_draw_corner_buf(const lv_area_t * coord
     }
 #endif
 
-    nema_cmdlist_t * cl = nema_cl_get_bound();
-    nema_cl_submit(cl);
-    nema_cl_wait(cl);
-    nema_cl_rewind(cl);
-
     /*Destroy temp buffer*/
-    lv_draw_buf_destroy(sh_ups_blur_buf);
+    nema_gc_add(sh_ups_blur_buf, (void(*)(void *))lv_draw_buf_destroy);
 #endif
-
-    /*This call has no immediate effect here; it's used to update the global blend mode after calling `lv_ambiq_shadow_blur_corner`.
-     *At this point, the blend mode must be updated to any valid state (or restore the previous one)
-     *to maintain correct global rendering behavior.*/
-    lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX1, NEMA_TEX2, NEMA_NOTEX, true);
 
 }
 

@@ -265,11 +265,6 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
                          clip_raster_area.x2 - clip_raster_area.x1 + 1, clip_raster_area.y2 - clip_raster_area.y1 + 1);
     }
 
-
-    nema_cmdlist_t * cl = nema_cl_get_bound();
-    nema_cl_submit(cl);
-    nema_cl_wait(cl);
-    nema_cl_rewind(cl);
 }
 
 
