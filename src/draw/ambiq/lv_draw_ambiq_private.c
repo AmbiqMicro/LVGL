@@ -321,7 +321,7 @@ void lv_ambiq_clip_area_clear(lv_draw_ambiq_unit_t * unit)
     unit->clip_area.y2 = unit->des_buffer.header.h - 1;
 }
 
-static lv_result_t lv_draw_ambiq_nema_context_lock(lv_draw_ambiq_unit_t * unit)
+lv_result_t lv_draw_ambiq_nema_context_lock(lv_draw_ambiq_unit_t * unit)
 {
 #if LV_USE_OS
     LV_ASSERT_MSG(unit != NULL, "Ambiq GPU draw unit is not initialized!");
@@ -341,7 +341,7 @@ static lv_result_t lv_draw_ambiq_nema_context_lock(lv_draw_ambiq_unit_t * unit)
 #endif
 }
 
-static lv_result_t lv_draw_ambiq_nema_context_unlock(lv_draw_ambiq_unit_t * unit)
+lv_result_t lv_draw_ambiq_nema_context_unlock(lv_draw_ambiq_unit_t * unit)
 {
 #if LV_USE_OS
     LV_ASSERT_MSG(unit != NULL, "Ambiq GPU draw unit is not initialized!");
