@@ -213,6 +213,9 @@ void lv_draw_ambiq_display_buffer_sync(lv_draw_buf_t * target_buffer,
                                        void * src, lv_color_format_t cf);
 
 void _lv_ambiq_decoder_close_and_free(lv_image_decoder_dsc_t * dsc);
+
+lv_result_t lv_draw_ambiq_nema_context_lock(lv_draw_ambiq_unit_t * unit);
+lv_result_t lv_draw_ambiq_nema_context_unlock(lv_draw_ambiq_unit_t * unit);
 /***********************
  * GLOBAL VARIABLES
  ***********************/

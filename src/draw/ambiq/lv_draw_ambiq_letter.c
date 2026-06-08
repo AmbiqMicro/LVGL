@@ -138,9 +138,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                                                  lv_draw_fill_dsc_t * fill_draw_dsc, const lv_area_t * fill_area)
 {
 
-
-    AM_DEBUG_PIN_SET(DEBUG_PIN_5);
-
     lv_draw_ambiq_unit_t * draw_ambiq_unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
     lv_layer_t * layer = t->target_layer;
 
@@ -204,16 +201,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                     }
                 }
 
-                // set color and blend mode
-                if((color & 0xFF000000U) == 0xFF000000U) {
-                    lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE);
-                }
-                else {
-                    lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE | NEMA_BLOP_MODULATE_A);
-                    nema_set_const_color(color);
-                }
-                nema_set_tex_color(color);
-
                 lv_ambiq_draw_bitmap_glyph_t ambiq_draw_bitmap_glyph = {
                     .bitmap_w = g->box_w,
                     .bitmap_h = g->box_h,
@@ -237,6 +224,16 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                     g->req_raw_bitmap = 1;
                     glyph_draw_dsc->glyph_data = font->get_glyph_bitmap(g, NULL);
 
+                    // set color and blend mode
+                    if((color & 0xFF000000U) == 0xFF000000U) {
+                        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE);
+                    }
+                    else {
+                        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE | NEMA_BLOP_MODULATE_A);
+                        nema_set_const_color(color);
+                    }
+                    nema_set_tex_color(color);
+
                     ambiq_draw_bitmap_glyph.nema_format = lv_ambiq_glyph_format_convert(g->format);
                     ambiq_draw_bitmap_glyph.bitmap = glyph_draw_dsc->glyph_data;
                     ambiq_draw_bitmap_glyph.stride = g->stride;
@@ -253,6 +250,16 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
                         LV_LOG_WARN("Glyph data is NULL");
                         break;
                     }
+
+                    // set color and blend mode
+                    if((color & 0xFF000000U) == 0xFF000000U) {
+                        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE);
+                    }
+                    else {
+                        lv_ambiq_set_blend_blit(NULL, NEMA_BL_SIMPLE | NEMA_BLOP_MODULATE_A);
+                        nema_set_const_color(color);
+                    }
+                    nema_set_tex_color(color);
 
                     ambiq_draw_bitmap_glyph.nema_format = NEMA_A8;
                     ambiq_draw_bitmap_glyph.bitmap = (void *)glyph_draw_dsc->_draw_buf->data;
@@ -311,9 +318,6 @@ static void LV_ATTRIBUTE_FAST_MEM draw_letter_cb(lv_draw_task_t * t, lv_draw_gly
         nema_gc_add(glyph_draw_dsc->_draw_buf, (void(*)(void *))lv_draw_buf_destroy);
         glyph_draw_dsc->_draw_buf = NULL;
     }
-
-
-    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
 }
 
 #endif /*LV_USE_DRAW_AMBIQ*/

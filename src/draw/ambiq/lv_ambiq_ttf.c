@@ -338,15 +338,17 @@ static const void * adapter_get_glyph_bitmap_cb(lv_font_glyph_dsc_t * g_dsc, lv_
     if(dsc->bitmap_cache == NULL) {
         // Cache is disabled, we cannot return a persistent buffer pointer directly without caching
         // So a cache size of > 0 is mandatory for TTF rendering in LVGL
+        LV_LOG_WARN("bitmap_cache = 0 is not supported now, set a non-zero value.");
         return NULL;
     }
 
     bitmap_cache_node_t search_key = {.glyph_index = g_dsc->gid.index};
-
+    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
     lv_cache_entry_t * entry = lv_cache_acquire_or_create(dsc->bitmap_cache, &search_key, &ctx);
     if(entry == NULL) {
         return NULL;
     }
+    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
 
     g_dsc->entry = entry;
 
@@ -396,8 +398,9 @@ static bool bitmap_cache_create_cb(bitmap_cache_node_t * node, void * user_data)
         LV_LOG_ERROR("Glyph bitmap allocation failed!");
         return false;
     }
-
+    AM_DEBUG_PIN_SET(DEBUG_PIN_5);
     lv_ambiq_vector_path_to_bitmap(path, bitmap_width, bitmap_height, bitmap_buffer->data, ctx->dsc->scale);
+    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
 
     lv_ambiq_blend_mode_clear(NULL);
 
@@ -835,13 +838,13 @@ void phys_font_free_path(NEMA_VG_PATH_HANDLE path)
 // --- Stream Implementation ---
 static size_t stream_read(stream_t * stream, void * data, size_t to_read)
 {
-    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
+    //    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
 
     if(stream->type == FONT_STREAM_TYPE_FILE) {
         uint32_t bytes_read = 0;
         lv_fs_read(stream->src.file_src.file, data, to_read, &bytes_read);
 
-        AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
+        //        AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
 
         return bytes_read;
     }
@@ -853,7 +856,7 @@ static size_t stream_read(stream_t * stream, void * data, size_t to_read)
             memcpy(data, (const uint8_t *)stream->src.buffer_src.data + stream->src.buffer_src.position, actual_read_size);
             stream->src.buffer_src.position += actual_read_size;
 
-            AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
+            //AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
         }
         return actual_read_size;
     }
