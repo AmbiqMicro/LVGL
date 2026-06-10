@@ -7,6 +7,8 @@
  *      INCLUDES
  *********************/
 #include "../../lvgl.h"
+#include "src/misc/lv_assert.h"
+#include "src/misc/lv_log.h"
 
 #if LV_USE_AMBIQ_TTF
 #include "../../core/lv_global.h"
@@ -33,8 +35,6 @@
 /**********************
  *      TYPEDEFS
  **********************/
-
-
 typedef struct {
     lv_ambiq_ttf_handle_t * nema_font;
     lv_cache_t   *   bitmap_cache;
@@ -318,7 +318,6 @@ static bool adapter_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t
     dsc_out->gid.index = glyph_info.glyph_index;
 
     dsc_out->entry = NULL;
-
     return true;
 }
 
@@ -343,12 +342,12 @@ static const void * adapter_get_glyph_bitmap_cb(lv_font_glyph_dsc_t * g_dsc, lv_
     }
 
     bitmap_cache_node_t search_key = {.glyph_index = g_dsc->gid.index};
-    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
+    //AM_DEBUG_PIN_SET(DEBUG_PIN_6);
     lv_cache_entry_t * entry = lv_cache_acquire_or_create(dsc->bitmap_cache, &search_key, &ctx);
     if(entry == NULL) {
         return NULL;
     }
-    AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
+    //AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
 
     g_dsc->entry = entry;
 
@@ -638,6 +637,10 @@ static NEMA_VG_PATH_HANDLE phys_font_create_path_from_raw(const void * raw_data)
     }
 
     NEMA_VG_PATH_HANDLE path = nema_vg_path_create();
+    if(path == NULL) {
+        LV_LOG_ERROR("path object create failed!");
+        return NULL;
+    }
     nema_vg_path_set_shape(path, seg_len_bytes, segments_ptr, coord_count, coords_ptr);
     return path;
 }
@@ -800,10 +803,15 @@ NEMA_VG_PATH_HANDLE phys_font_create_path(lv_ambiq_ttf_handle_t * font, uint32_t
             return NULL;
         }
 
-        if(metrics.glyph_data_length == 0) return NULL;
+        if(metrics.glyph_data_length == 0)
+            return NULL;
 
         void * raw_data = lv_malloc(metrics.glyph_data_length);
-        if(!raw_data) return NULL;
+        LV_ASSERT_MALLOC(raw_data);
+        if(!raw_data) {
+            LV_LOG_ERROR("glyph vector data temp buffer malloc failed!");
+            return NULL;
+        }
 
         stream_seek(&font->stream, metrics.glyph_data_offset);
         if(stream_read(&font->stream, raw_data, metrics.glyph_data_length) != metrics.glyph_data_length) {
@@ -812,6 +820,9 @@ NEMA_VG_PATH_HANDLE phys_font_create_path(lv_ambiq_ttf_handle_t * font, uint32_t
         }
 
         NEMA_VG_PATH_HANDLE path = phys_font_create_path_from_raw(raw_data);
+        if(path == NULL) {
+            LV_LOG_ERROR("path object create failed!");
+        }
         lv_free(raw_data);
 
         return path;
@@ -838,13 +849,13 @@ void phys_font_free_path(NEMA_VG_PATH_HANDLE path)
 // --- Stream Implementation ---
 static size_t stream_read(stream_t * stream, void * data, size_t to_read)
 {
-    //    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
+    AM_DEBUG_PIN_SET(DEBUG_PIN_6);
 
     if(stream->type == FONT_STREAM_TYPE_FILE) {
         uint32_t bytes_read = 0;
         lv_fs_read(stream->src.file_src.file, data, to_read, &bytes_read);
 
-        //        AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
+        AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
 
         return bytes_read;
     }
@@ -856,7 +867,7 @@ static size_t stream_read(stream_t * stream, void * data, size_t to_read)
             memcpy(data, (const uint8_t *)stream->src.buffer_src.data + stream->src.buffer_src.position, actual_read_size);
             stream->src.buffer_src.position += actual_read_size;
 
-            //AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
+            AM_DEBUG_PIN_CLEAR(DEBUG_PIN_6);
         }
         return actual_read_size;
     }
