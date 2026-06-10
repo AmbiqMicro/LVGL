@@ -141,11 +141,14 @@ void lv_draw_ambiq_box_shadow(lv_draw_task_t * t, const lv_draw_box_shadow_dsc_t
     /*Get how many pixels are affected by the blur on the corners*/
     int32_t corner_size = dsc->width  + r_sh;
 
-    lv_draw_buf_t * sh_buf = lv_draw_buf_create_ex(&(LV_GLOBAL_DEFAULT()->font_draw_buf_handlers), corner_size,
+    lv_draw_buf_t * sh_buf = lv_draw_buf_create_ex(&(LV_GLOBAL_DEFAULT()->image_cache_draw_buf_handlers), corner_size,
                                                    corner_size,
                                                    LV_COLOR_FORMAT_L8, corner_size);
 
     LV_ASSERT_MALLOC(sh_buf);
+
+    lv_draw_buf_invalidate_cache(sh_buf, NULL);
+
     shadow_draw_corner_buf(&core_area, sh_buf, dsc->width, r_sh);
 
     /*Skip a lot of masking if the background will cover the shadow that would be masked out*/
