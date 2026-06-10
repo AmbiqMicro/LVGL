@@ -7,6 +7,7 @@
  *      INCLUDES
  *********************/
 #include "../../lvgl.h"
+#include "src/draw/lv_draw_buf.h"
 #include "src/misc/lv_assert.h"
 #include "src/misc/lv_log.h"
 
@@ -397,6 +398,8 @@ static bool bitmap_cache_create_cb(bitmap_cache_node_t * node, void * user_data)
         LV_LOG_ERROR("Glyph bitmap allocation failed!");
         return false;
     }
+
+    lv_draw_buf_invalidate_cache(bitmap_buffer, NULL);
     AM_DEBUG_PIN_SET(DEBUG_PIN_5);
     lv_ambiq_vector_path_to_bitmap(path, bitmap_width, bitmap_height, bitmap_buffer->data, ctx->dsc->scale);
     AM_DEBUG_PIN_CLEAR(DEBUG_PIN_5);
