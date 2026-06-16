@@ -43,14 +43,13 @@
  *      INCLUDES
  *********************/
 #include "lv_draw_ambiq.h"
-#include "nema_sys_defs.h"
 
 #if LV_USE_DRAW_AMBIQ
 
 #include "lv_draw_ambiq_private.h"
 #include "../lv_image_decoder_private.h"
 #include "../lv_draw_image_private.h"
-
+#include "nema_sys_defs.h"
 #include "nema_graphics.h"
 
 typedef struct {
