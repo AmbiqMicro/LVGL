@@ -7,9 +7,6 @@
  *      INCLUDES
  *********************/
 #include "../../lvgl.h"
-#include "src/draw/lv_draw_buf.h"
-#include "src/misc/lv_assert.h"
-#include "src/misc/lv_log.h"
 
 #if LV_USE_AMBIQ_TTF
 #include "../../core/lv_global.h"

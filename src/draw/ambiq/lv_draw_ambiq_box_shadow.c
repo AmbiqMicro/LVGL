@@ -42,11 +42,8 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "../../misc/lv_area_private.h"
-#include "../lv_draw_private.h"
-#include "lv_draw_ambiq.h"
-#include "src/draw/lv_draw_buf.h"
 
+#include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
 
 #include "../../core/lv_global.h"
@@ -55,6 +52,8 @@
 #include "../../misc/lv_assert.h"
 #include "../../stdlib/lv_string.h"
 #include "lv_draw_ambiq_private.h"
+#include "../../misc/lv_area_private.h"
+#include "../lv_draw_private.h"
 
 /*********************
  *      DEFINES
