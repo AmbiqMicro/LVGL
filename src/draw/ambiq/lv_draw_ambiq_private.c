@@ -684,13 +684,17 @@ uint32_t lv_draw_ambiq_bind_image_texture(const lv_draw_buf_t * decoded, uint32_
         nema_set_const_color(global_opa << 24);
     }
 
+    /* Stride is computed internally for NEMA TSC images (see lv_draw_nema_gfx_img.c) */
+    int32_t stride = (header->cf >= LV_COLOR_FORMAT_NEMA_TSC_START && header->cf <= LV_COLOR_FORMAT_NEMA_TSC_END)
+                     || header->stride == 0 ? -1 : (int32_t)header->stride;
+
     //bind image
     nema_bind_tex(NEMA_TEX1,
                   (uintptr_t)decoded->data + lut_size * 4,
                   header->w,
                   header->h,
                   nema_cf,
-                  header->stride,
+                  stride,
                   NEMA_FILTER_BL | tex_wrap_mode);
 
     //Set blend op
