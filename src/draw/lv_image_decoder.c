@@ -387,9 +387,6 @@ static lv_image_decoder_t * image_decoder_get_info(lv_image_decoder_dsc_t * dsc,
 
 static uint32_t img_width_to_stride(lv_image_header_t * header)
 {
-    if(header->cf >= LV_COLOR_FORMAT_NEMA_TSC_START && header->cf <= LV_COLOR_FORMAT_NEMA_TSC_END) {
-        return 0;
-    }
     if(header->cf == LV_COLOR_FORMAT_RGB565A8) {
         return header->w * 2;
     }
