@@ -243,6 +243,11 @@ static void lv_draw_ambiq_image_core(lv_draw_task_t * t,
             else if(draw_dsc->header.cf == LV_COLOR_FORMAT_ARGB8888_PREMULTIPLIED) {
                 blending_mode = NEMA_BL_SRC_OVER;
             }
+            else if((draw_dsc->header.cf == LV_COLOR_FORMAT_NEMA_TSC6A) ||
+                    (draw_dsc->header.cf == LV_COLOR_FORMAT_NEMA_TSC6AP) ||
+                    (draw_dsc->header.cf == LV_COLOR_FORMAT_NEMA_TSC12A)) {
+                blending_mode = NEMA_BL_SRC_OVER;
+            }
             else {
                 blending_mode = NEMA_BL_SIMPLE;
             }
