@@ -117,7 +117,8 @@ by getting the Y coordinate of a child.
     int32_t y_end = lv_obj_get_y(child);
     if(y_start + 100 != y_end) fail();
 
-Please refer to :ref:`lv_test_indev_h` for the list of supported input device emulation functions.
+Please refer to :ref:`others/test/lv_test_indev.h` for the list of supported input
+device emulation functions.
 
 Screenshot Comparison
 ---------------------
@@ -153,10 +154,10 @@ To read and decode PNG images and to store the converted rendered image, a few M
 (not :cpp:expr:`lv_malloc`).
 
 
-The screenshot comparison uses `lodepng` which is built-in to LVGL and just needs to be enabled with
+The screenshot comparison uses ``lodepng`` which is built-in to LVGL and just needs to be ebnabled with
 ``LV_USE_LODEPNG``.
 
-To avoid making the entire Test module dependent on `lodepng`, screenshot comparison can be individually enabled by
+To avoid making the entire Test module dependent on ``lodepng``, screenshot comparison can be individually enabled by
 ``LV_USE_TEST_SCREENSHOT_COMPARE``.
 
 API

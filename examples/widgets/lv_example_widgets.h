@@ -31,6 +31,8 @@ void lv_example_arc_1(void);
 void lv_example_arc_2(void);
 void lv_example_arc_3(void);
 
+void lv_example_arclabel_1(void);
+
 void lv_example_bar_1(void);
 void lv_example_bar_2(void);
 void lv_example_bar_3(void);
@@ -96,6 +98,7 @@ void lv_example_label_3(void);
 void lv_example_label_4(void);
 void lv_example_label_5(void);
 void lv_example_label_6(void);
+void lv_example_label_7(void);
 
 void lv_example_led_1(void);
 
@@ -135,6 +138,7 @@ void lv_example_scale_8(void);
 void lv_example_scale_9(void);
 void lv_example_scale_10(void);
 void lv_example_scale_11(void);
+void lv_example_scale_12(void);
 
 void lv_example_slider_1(void);
 void lv_example_slider_2(void);
@@ -173,4 +177,4 @@ void lv_example_win_1(void);
 } /*extern "C"*/
 #endif
 
-#endif /*LV_EX_WIDGETS_H*/
+#endif /*LV_EXAMPLE_WIDGETS_H*/

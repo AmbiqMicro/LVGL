@@ -1,4 +1,5 @@
 .. _events:
+.. _lv_obj_events:
 
 ======
 Events
@@ -12,7 +13,7 @@ interesting to the user, e.g. when a Widget:
 - has its value changed
 - is redrawn, etc.
 
-Besides Widgets, events can registered from displays and input devices as well.
+Besides Widgets, events can be registered on displays and input devices as well.
 It is not detailed below, but you can do this by changing the prefix of the functions
 from ``lv_obj_`` to ``lv_display_`` or ``lv_indev_``.
 
@@ -114,6 +115,8 @@ are sent,
 *Custom events* are added by the user and are never sent by LVGL.
 
 The following event codes exist:
+
+.. _indev_events:
 
 Input Device Events
 -------------------
@@ -242,13 +245,22 @@ Fields of lv_event_t
 ********************
 
 :cpp:type:`lv_event_t` is the only parameter passed to the event callback and it
-contains all data about the event. The following values can be gotten from it:
+contains all data about the event. The following values can be retrieved from it:
 
 - :cpp:expr:`lv_event_get_code(e)`: get the event code
 - :cpp:expr:`lv_event_get_current_target(e)`: get Widget to which an event was sent. I.e. the Widget whose event handler is being called.
-- :cpp:expr:`lv_event_get_target(e)`: get Widget that originally triggered the event (different from :cpp:func:`lv_event_get_target` if :ref:`event bubbling <event_bubbling>` is enabled)
+- :cpp:expr:`lv_event_get_target(e)`: get the Widget, Display or Indev that originally triggered the event (different from :cpp:func:`lv_event_get_current_target` if :ref:`event bubbling <event_bubbling>` is enabled).
+- :cpp:expr:`lv_event_get_target_obj(e)`: get the Widget that originally triggered the event.
 - :cpp:expr:`lv_event_get_user_data(e)`: get the pointer passed as the last parameter of :cpp:func:`lv_obj_add_event_cb`.
 - :cpp:expr:`lv_event_get_param(e)`: get the parameter passed as the last parameter of :cpp:func:`lv_obj_send_event_cb`
+
+.. tip::
+   When using C++, prefer :cpp:expr:`lv_event_get_target_obj(e)` over :cpp:expr:`lv_event_get_target(e)` 
+   when you know the target is a Widget, as it returns the correct type without requiring a cast.
+
+.. warning::
+   Only call :cpp:expr:`lv_event_get_target_obj(e)` when the event target is known to be a Widget. 
+   Calling it for Display or Indev targets is considered Undefined Behavior.
 
 .. _event_bubbling:
 
@@ -264,6 +276,24 @@ parent, and so on.
 The *target* parameter of the event is always the current target Widget,
 not the original Widget. To get the original target call
 :cpp:expr:`lv_event_get_target_obj(e)` in the event handler.
+
+.. _event_trickle:
+
+Event Trickle
+*************
+
+Also known as Event Capturing, if :cpp:expr:`lv_obj_add_flag(widget, LV_OBJ_FLAG_EVENT_TRICKLE)`
+is enabled all events will be sent to the Widget's children as well. This is the opposite of
+event bubbling --- instead of propagating up the parent, events propagate down to the children.
+
+The trickle mechanism only affects immediate children, not grandchildren or
+deeper descendants. If you need events to propagate to deeper levels, each child
+would need to have the :cpp:enumerator:`LV_OBJ_FLAG_EVENT_TRICKLE` flag enabled.
+
+Like with bubbling, the *target* parameter of the event is always the current target Widget,
+not the original Widget. To get the original target call
+:cpp:expr:`lv_event_get_target_obj(e)` in the event handler.
+
 
 .. _events_examples:
 

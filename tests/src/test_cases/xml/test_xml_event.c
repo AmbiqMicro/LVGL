@@ -47,7 +47,7 @@ void test_xml_event_call_function_attr(void)
         NULL, NULL,
     };
 
-    lv_xml_create(button, "lv_event-call_function", event_attrs);
+    lv_xml_create(button, "event_cb", event_attrs);
 
 
     const char * label_attrs[] = {
@@ -75,13 +75,13 @@ void test_xml_event_call_function_component(void)
         "<component>"
         "   <view extends=\"lv_button\" x=\"5\" y=\"5\">"
         "		<lv_label text=\"Click me\"/>"
-        "		<lv_event-call_function trigger=\"clicked\" callback=\"count_cb\" user_data=\"3\"/>"
+        "		<lv_obj-event_cb trigger=\"clicked\" callback=\"count_cb\" user_data=\"3\"/>"
         "	</view>"
         "</component>"
     };
 
     lv_xml_register_event_cb(NULL, "count_cb", count_event_cb);
-    lv_xml_component_register_from_data("my_button", xml);
+    lv_xml_register_component_from_data("my_button", xml);
     lv_xml_create(lv_screen_active(), "my_button", NULL);
 
     lv_refr_now(NULL);  /*Make sure that the coordinates are calculated*/

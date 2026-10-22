@@ -342,7 +342,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     default_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     default_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
     default_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
-    default_handlers.copy_cb = lv_draw_ambiq_buffer_copy;
+    default_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
     image_cache_draw_buf_handlers.buf_malloc_cb = lv_draw_ambiq_buffer_malloc_texture;
     image_cache_draw_buf_handlers.buf_free_cb = lv_draw_ambiq_buffer_free_texture;
@@ -351,7 +351,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     image_cache_draw_buf_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     image_cache_draw_buf_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
     image_cache_draw_buf_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
-    image_cache_draw_buf_handlers.copy_cb = lv_draw_ambiq_buffer_copy;
+    image_cache_draw_buf_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
     font_draw_buf_handlers.buf_malloc_cb = lv_draw_ambiq_buffer_malloc_texture;
     font_draw_buf_handlers.buf_free_cb = lv_draw_ambiq_buffer_free_texture;
@@ -360,7 +360,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     font_draw_buf_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     font_draw_buf_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
     font_draw_buf_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
-    font_draw_buf_handlers.copy_cb = lv_draw_ambiq_buffer_copy;
+    font_draw_buf_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
 }
 

@@ -4,21 +4,15 @@ Example
 -->
 
 <widget>
-	<api>
-	    <prop name="today_date" help="Current date">
-	    	<param name="year" type="int" help=""/>
-	    	<param name="month" type="int" help=""/>
-	    	<param name="day" type="int" help=""/>
-	    </prop>
-	    <prop name="month_shown" help="Shown date">
-	    	<param name="year" type="int" help=""/>
-	    	<param name="month" type="int" help=""/>
-	    </prop>
-		<element name="header_arrow" access="add" help=""/>
-		<element name="header_dropdown" access="add" help="">
-			<prop name="year_list">
-				<param name="list" type="string" />
-			</prop>
-		</element>
-	</api>
+    <api>
+        <prop name="today_year" type="int" help="Mark today’s year in the calendar"/>
+        <prop name="today_month" type="int" help="Mark today’s month in the calendar"/>
+        <prop name="today_day" type="int" help="Mark today’s day in the calendar"/>
+
+        <prop name="shown_year" type="int" help="Show this year in the calendar"/>
+        <prop name="shown_month" type="int" help="Show this month in the calendar"/>
+
+        <element name="header_arrow" access="add" help="Add arrow buttons for navigating months"/>
+        <element name="header_dropdown" access="add" help="Add a dropdown for selecting months or years"/>
+    </api>
 </widget>

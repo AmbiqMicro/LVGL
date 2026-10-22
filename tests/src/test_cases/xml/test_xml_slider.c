@@ -32,7 +32,8 @@ static void test_with_attrs(const char * name)
     lv_xml_create(scr, name, attrs_1);
 
     const char * attrs_2[] = {
-        "range", "-100 100",
+        "min_value", "-100",
+        "max_value", "100",
         "mode", "symmetrical",
         "value", "50",
         NULL, NULL,
@@ -66,7 +67,7 @@ void test_xml_slider_component(void)
                        "</view>"
                        "</component>";
 
-    lv_xml_component_register_from_data("slider_test", xml);
+    lv_xml_register_component_from_data("slider_test", xml);
 
     test_with_attrs("slider_test");
 }

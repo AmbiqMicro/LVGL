@@ -14,6 +14,26 @@ Synopsis
     Build Arguments and Clean Arguments can be used one at a time
     or be freely mixed and combined.
 
+Data Flow
+---------
+
+.. code-block:: text
+
+    Inputs              Generated Source Files             Output
+    -----------         ----------------------       ----------------------
+    ./docs/src/   \
+    ./src/         >===> ./docs/intermediate/  ===>  ./docs/build/<format>/
+    ./examples/   /
+
+    Once ./docs/intermediate/ is built, you can use all the Sphinx output
+    formats, e.g.
+
+    - make html
+    - make latex
+    - make man
+    - make htmlhelp
+    - etc.
+
 Description
 -----------
     Copy source files to an intermediate directory and modify them there before
@@ -652,10 +672,14 @@ def run(args):
         src = intermediate_dir
         dst = output_dir
         cpu = os.cpu_count()
-        # As of 22-Feb-2025, sadly the -D version=xxx is not working as documented.
-        # So the version strings applicable to Latex/PDF/man pages/texinfo
-        # formats are assembled by `conf.py`.
-        cmd_line = f'sphinx-build -M latex "{src}" "{dst}" -j {cpu}'
+
+        # The -D option correctly replaces (overrides) configuration attribute
+        # values in the `conf.py` module.  Since `conf.py` now correctly
+        # computes its own `version` value, we don't have to override it here
+        # with a -D options.  If it should need to be used in the future,
+        # the value after the '=' MUST NOT have quotation marks around it
+        # or it won't work.  Correct usage:  f'-D version={ver}' .
+        cmd_line = f'sphinx-build -M latex "{src}" "{dst}" -j {cpu} --fail-on-warning --keep-going'
         cmd(cmd_line)
 
         # Generate PDF.
@@ -723,7 +747,7 @@ def run(args):
         if debugging_breathe:
             from sphinx.cmd.build import main as sphinx_build
             # Don't allow parallel processing while debugging (the '-j' arg is removed).
-            sphinx_args = ['-M', 'html', f'{src}', f'{dst}', '-D', f'version={ver}']
+            sphinx_args = ['-M', 'html', f'{src}', f'{dst}']
 
             if len(env_opt) > 0:
                 sphinx_args.append(f'{env_opt}')
@@ -736,7 +760,7 @@ def run(args):
             # with a -D options.  If it should need to be used in the future,
             # the value after the '=' MUST NOT have quotation marks around it
             # or it won't work.  Correct usage:  f'-D version={ver}' .
-            cmd_line = f'sphinx-build -M html "{src}" "{dst}" -j {cpu} {env_opt}'
+            cmd_line = f'sphinx-build -M html "{src}" "{dst}" -j {cpu} {env_opt} --fail-on-warning --keep-going'
             cmd(cmd_line)
 
         t2 = datetime.now()
