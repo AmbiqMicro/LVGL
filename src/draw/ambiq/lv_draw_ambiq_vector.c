@@ -71,7 +71,7 @@
  *  STATIC PROTOTYPES
  **********************/
 
-static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_draw_dsc_t * dsc);
+static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_path_ctx_t * dsc);
 
 /**********************
  *  STATIC VARIABLES
@@ -89,7 +89,7 @@ static float aabb_max_y = 0;
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * dsc)
+void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_dsc_t * dsc)
 {
     if(dsc->task_list == NULL)
         return;
@@ -553,7 +553,7 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
     }
 }
 
-static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_draw_dsc_t * dsc)
+static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vector_path_ctx_t * dsc)
 {
     LV_PROFILER_DRAW_BEGIN;
     lv_draw_task_t * t = (lv_draw_task_t *)ctx;

@@ -245,7 +245,7 @@ static inline void execute_drawing_unit(lv_draw_task_t * t)
 
     lv_draw_ambiq_unit_t * unit = (lv_draw_ambiq_unit_t *)t->draw_unit;
 
-    t->state = LV_DRAW_TASK_STATE_READY;
+    t->state = LV_DRAW_TASK_STATE_FINISHED;
     unit->task_act = NULL;
 
     /*The draw unit is free now. Request a new dispatching as it can get a new task*/

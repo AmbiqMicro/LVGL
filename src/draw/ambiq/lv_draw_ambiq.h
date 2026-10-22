@@ -169,7 +169,7 @@ void lv_draw_ambiq_mask_rect(lv_draw_task_t * t, const lv_draw_mask_rect_dsc_t *
  * @param draw_task     pointer to a draw task
  * @param dsc           the draw descriptor
  */
-void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_task_dsc_t * dsc);
+void lv_draw_ambiq_vector(lv_draw_task_t * t, const lv_draw_vector_dsc_t * dsc);
 #endif
 
 /***********************
