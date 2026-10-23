@@ -45,8 +45,7 @@
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
 #include "lv_draw_ambiq_private.h"
-#include "../../core/lv_refr.h"
-#include "../../misc/lv_assert.h"
+#include "../../lvgl_public.h"
 
 /*********************
  *      DEFINES

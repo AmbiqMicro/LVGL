@@ -45,8 +45,7 @@
 #include "lv_draw_ambiq.h"
 #include "../../image/lv_image_decoder_private.h"
 #if LV_USE_DRAW_AMBIQ
-#include "../../core/lv_refr.h"
-#include "../../misc/lv_assert.h"
+#include "../../lvgl_public.h"
 #include "lv_draw_ambiq_private.h"
 #include <math.h>
 

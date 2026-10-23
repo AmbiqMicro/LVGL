@@ -42,7 +42,7 @@
 /*********************
  *      INCLUDES
  *********************/
-#include "../../core/lv_refr.h"
+#include "../../lvgl_public.h"
 
 #if LV_USE_DRAW_AMBIQ && LV_USE_AMBIQ_VG
 

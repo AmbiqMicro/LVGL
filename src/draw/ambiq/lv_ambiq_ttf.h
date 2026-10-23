@@ -10,11 +10,10 @@
 extern "C" {
 #endif
 
-#include "../../lv_conf_internal.h"
+#include "../../lvgl_public.h"
 
 #if LV_USE_AMBIQ_TTF
 #include <stddef.h>
-#include "../../font/lv_font.h"
 
 /* -----------------------------------------------------------------------------
  * Phase 1: Physical Font Resource Loading

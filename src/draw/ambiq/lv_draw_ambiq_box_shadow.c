@@ -47,10 +47,7 @@
 #if LV_USE_DRAW_AMBIQ
 
 #include "../../core/lv_global.h"
-#include "../../misc/lv_math.h"
-#include "../../core/lv_refr.h"
-#include "../../misc/lv_assert.h"
-#include "../../stdlib/lv_string.h"
+#include "../../lvgl_public.h"
 #include "lv_draw_ambiq_private.h"
 #include "../../misc/lv_area_private.h"
 #include "../lv_draw_private.h"

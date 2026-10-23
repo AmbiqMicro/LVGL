@@ -43,14 +43,10 @@
  *      INCLUDES
  *********************/
 #include "../../misc/lv_area_private.h"
-#include "../lv_draw_mask.h"
+#include "../../lvgl_public.h"
 #include "../lv_draw_private.h"
 #if LV_USE_DRAW_AMBIQ
 
-#include "../../misc/lv_math.h"
-#include "../../misc/lv_log.h"
-#include "../../stdlib/lv_mem.h"
-#include "../../stdlib/lv_string.h"
 #include "lv_draw_ambiq.h"
 #include "lv_draw_ambiq_private.h"
 

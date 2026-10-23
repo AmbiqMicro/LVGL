@@ -48,7 +48,7 @@
 #include "lv_draw_ambiq.h"
 #include "lv_draw_ambiq_private.h"
 #include "../lv_draw_image_private.h"
-#include "../../stdlib/lv_string.h"
+#include "../../lvgl_public.h"
 #include "../../core/lv_global.h"
 
 /*********************

@@ -50,12 +50,8 @@
 #if LV_USE_DRAW_AMBIQ
 #include "lv_draw_ambiq.h"
 #include "lv_draw_ambiq_private.h"
-#include "../../misc/lv_log.h"
+#include "../../lvgl_public.h"
 #include "../../core/lv_refr_private.h"
-#include "../../stdlib/lv_mem.h"
-#include "../../misc/lv_math.h"
-#include "../../misc/lv_color.h"
-#include "../../stdlib/lv_string.h"
 #include "../../core/lv_global.h"
 
 /*********************

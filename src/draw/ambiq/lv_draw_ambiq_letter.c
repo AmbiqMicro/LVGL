@@ -47,15 +47,8 @@
 #if LV_USE_DRAW_AMBIQ
 
 #include "lv_draw_ambiq_private.h"
-#include "../../display/lv_display.h"
-#include "../../misc/lv_math.h"
-#include "../../misc/lv_assert.h"
-#include "../../misc/lv_area.h"
-#include "../../misc/lv_style.h"
-#include "../../font/lv_font.h"
+#include "../../lvgl_public.h"
 #include "../../core/lv_refr_private.h"
-#include "../../stdlib/lv_string.h"
-#include "../../font/fmt_txt/lv_font_fmt_txt.h"
 
 /*********************
  *      DEFINES

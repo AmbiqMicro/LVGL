@@ -44,8 +44,7 @@
  *********************/
 #include "lv_draw_ambiq.h"
 #if LV_USE_DRAW_AMBIQ
-#include "../../core/lv_refr.h"
-#include "../../misc/lv_assert.h"
+#include "../../lvgl_public.h"
 #include "lv_draw_ambiq_private.h"
 
 /*********************
