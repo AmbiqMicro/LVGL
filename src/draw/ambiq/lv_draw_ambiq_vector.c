@@ -43,7 +43,7 @@
  *      INCLUDES
  *********************/
 
-#include "../lv_image_decoder_private.h"
+#include "../../image/lv_image_decoder_private.h"
 #include "../lv_draw_vector_private.h"
 #include "lv_draw_ambiq.h"
 

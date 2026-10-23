@@ -43,7 +43,7 @@
  *      INCLUDES
  *********************/
 #include "../../misc/lv_area_private.h"
-#include "../lv_image_decoder_private.h"
+#include "../../image/lv_image_decoder_private.h"
 #include "../lv_draw_image_private.h"
 #include "../lv_draw_private.h"
 

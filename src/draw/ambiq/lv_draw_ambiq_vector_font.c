@@ -51,7 +51,7 @@
 #include "../lv_draw_label_private.h"
 
 #if LV_USE_FREETYPE
-    #include "../../libs/freetype/lv_freetype_private.h"
+    #include "../../font/freetype/lv_freetype_private.h"
 #endif
 
 #if 0
@@ -278,9 +278,6 @@ static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * p
         case LV_FREETYPE_OUTLINE_CONIC_TO:
             seg = NEMA_VG_PRIM_BEZIER_QUAD;
             break;
-        case LV_FREETYPE_OUTLINE_BORDER_START:
-            seg = NEMA_VG_PRIM_CLOSE;
-            break;
         default:
             LV_LOG_ERROR("unknown point type: %d", type);
             break;
@@ -301,16 +298,12 @@ static void lv_ambiq_ft_outline_push(const lv_freetype_outline_event_param_t * p
         lv_ambiq_ft_data_array_push(param->to.x, param->to.y);
     }
 
-    if((type == LV_FREETYPE_OUTLINE_END) || (type == LV_FREETYPE_OUTLINE_BORDER_START)) {
+    /* LVGL 9.5 dropped the FreeType border pass (LV_FREETYPE_OUTLINE_BORDER_START),
+     * so glyph_border is never built now and the stroke path in draw stays off. */
+    if(type == LV_FREETYPE_OUTLINE_END) {
         nema_vg_path_set_shape(cur_path,
                                lv_array_size(&path_seg), lv_array_front(&path_seg),
                                lv_array_size(&path_data), lv_array_front(&path_data));
-    }
-
-    if(type == LV_FREETYPE_OUTLINE_BORDER_START) {
-        outline->glyph_border = nema_vg_path_create();
-
-        cur_path = outline->glyph_border;
     }
 
     LV_PROFILER_DRAW_END;

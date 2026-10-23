@@ -162,8 +162,10 @@ static void lv_draw_ambiq_buffer_invalidate_core(uint32_t pool, const lv_draw_bu
 
 
 
-static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t * a)
+static void lv_draw_ambiq_buffer_clean(lv_draw_buf_t * draw_buf, const lv_area_t * a, lv_layer_t * layer)
 {
+    /* The GPU clears the buffer directly; LVGL's layer context is not needed */
+    LV_UNUSED(layer);
     const lv_image_header_t * header = &draw_buf->header;
 
     lv_area_t a_clipped;
@@ -341,7 +343,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     default_handlers.invalidate_cache_cb = lv_draw_ambiq_buffer_invalidate;
     default_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     default_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
-    default_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
+    default_handlers.buf_clear_cb = lv_draw_ambiq_buffer_clean;
     default_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
     image_cache_draw_buf_handlers.buf_malloc_cb = lv_draw_ambiq_buffer_malloc_texture;
@@ -350,7 +352,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     image_cache_draw_buf_handlers.invalidate_cache_cb = lv_draw_ambiq_buffer_invalidate_texture;
     image_cache_draw_buf_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     image_cache_draw_buf_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
-    image_cache_draw_buf_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
+    image_cache_draw_buf_handlers.buf_clear_cb = lv_draw_ambiq_buffer_clean;
     image_cache_draw_buf_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
     font_draw_buf_handlers.buf_malloc_cb = lv_draw_ambiq_buffer_malloc_texture;
@@ -359,7 +361,7 @@ void lv_draw_ambiq_init_buf_handlers(void)
     font_draw_buf_handlers.invalidate_cache_cb = lv_draw_ambiq_buffer_invalidate_texture;
     font_draw_buf_handlers.align_pointer_cb = lv_draw_ambiq_buffer_align;
     font_draw_buf_handlers.width_to_stride_cb = lv_draw_ambiq_buffer_width_to_stride;
-    font_draw_buf_handlers.clear_cb = lv_draw_ambiq_buffer_clean;
+    font_draw_buf_handlers.buf_clear_cb = lv_draw_ambiq_buffer_clean;
     font_draw_buf_handlers.buf_copy_cb = lv_draw_ambiq_buffer_copy;
 
 }
