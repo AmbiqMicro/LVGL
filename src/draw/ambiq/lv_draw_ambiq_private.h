@@ -58,34 +58,34 @@ extern "C" {
 
 #include "../../misc/lv_area_private.h"
 
-#include "am_mcu_apollo.h"
+#include <am_mcu_apollo.h>
 
-#include "nema_hal.h"
-#include "nema_math.h"
-#include "nema_core.h"
-#include "nema_regs.h"
-#include "nema_raster.h"
-#include "nema_graphics.h"
-#include "nema_provisional.h"
-#include "nema_interpolators.h"
-#include "nema_error.h"
-#include "nema_raster.h"
-#include "nema_blender.h"
-#include "nema_sys_defs.h"
-#include "nema_interpolators.h"
-#include "nema_matrix3x3.h"
-#include "nema_programHW.h"
+#include <nema_hal.h>
+#include <nema_math.h>
+#include <nema_core.h>
+#include <nema_regs.h>
+#include <nema_raster.h>
+#include <nema_graphics.h>
+#include <nema_provisional.h>
+#include <nema_interpolators.h>
+#include <nema_error.h>
+#include <nema_raster.h>
+#include <nema_blender.h>
+#include <nema_sys_defs.h>
+#include <nema_interpolators.h>
+#include <nema_matrix3x3.h>
+#include <nema_programHW.h>
 
 #if LV_USE_AMBIQ_VG
-#include "nema_vg_context.h"
-#include "nema_vg.h"
-#include "nema_vg_paint.h"
-#include "nema_vg_path.h"
-#include "nema_vg_font.h"
-#include "nema_vg_tsvg.h"
+#include <nema_vg_context.h>
+#include <nema_vg.h>
+#include <nema_vg_paint.h>
+#include <nema_vg_path.h>
+#include <nema_vg_font.h>
+#include <nema_vg_tsvg.h>
 #endif
 
-#include "gpu_patch.h"
+#include <gpu_patch.h>
 
 /*********************
  *      DEFINES

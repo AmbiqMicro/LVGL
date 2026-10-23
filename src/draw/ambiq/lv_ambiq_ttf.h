@@ -13,7 +13,7 @@ extern "C" {
 #include "../../lvgl_public.h"
 
 #if LV_USE_AMBIQ_TTF
-#include <stddef.h>
+#include LV_STDDEF_INCLUDE
 
 /* -----------------------------------------------------------------------------
  * Phase 1: Physical Font Resource Loading

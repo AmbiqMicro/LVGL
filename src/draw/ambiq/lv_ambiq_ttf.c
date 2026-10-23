@@ -15,12 +15,12 @@
 #include <math.h>
 
 #include "lv_ambiq_ttf.h"
-#include "nema_vg.h"
-#include "gpu_patch.h"
+#include <nema_vg.h>
+#include <gpu_patch.h>
 #include "lv_draw_ambiq_private.h"
 
-#include "am_debug_pin.h"
-#include "am_mem.h"
+#include <am_debug_pin.h>
+#include <am_mem.h>
 
 /*********************
  *      DEFINES

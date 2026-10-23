@@ -34,6 +34,7 @@ DRAW_TASK_STATE_NAMES = {
 }
 
 DRAW_UNIT_TYPE_NAMES = {
+    "AMBIQ": "lv_draw_ambiq_unit_t",
     "DAVE2D": "lv_draw_dave2d_unit_t",
     "DMA2D": "lv_draw_dma2d_unit_t",
     "ESP_PPA": "lv_draw_ppa_unit_t",

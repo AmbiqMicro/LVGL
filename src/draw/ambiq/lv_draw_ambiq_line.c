@@ -42,8 +42,8 @@
 /*********************
  *      INCLUDES
  *********************/
-#include <stdbool.h>
 #include "lv_draw_ambiq.h"
+#include LV_STDBOOL_INCLUDE
 #if LV_USE_DRAW_AMBIQ
 
 #include "../../lvgl_public.h"
