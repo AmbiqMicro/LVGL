@@ -8,6 +8,11 @@
 void setUp(void)
 {
     /* Function run before every test */
+    /* Temporarily remove other PNG-capable decoders (lodepng/ffmpeg) to make sure libpng is used */
+    lv_lodepng_deinit();
+#if LV_USE_FFMPEG
+    lv_ffmpeg_deinit();
+#endif
 }
 
 void tearDown(void)
@@ -60,7 +65,7 @@ void test_libpng_1(void)
 
     TEST_ASSERT_EQUAL_SCREENSHOT("libs/png_1.png");
 
-    size_t mem_before = lv_test_get_free_mem();
+    size_t allocs_before = lv_test_get_allocation_count();
     for(uint32_t i = 0; i < 50; i++) {
         create_images();
 
@@ -70,7 +75,7 @@ void test_libpng_1(void)
 
     TEST_ASSERT_EQUAL_SCREENSHOT("libs/png_1.png");
 
-    TEST_ASSERT_MEM_LEAK_LESS_THAN(mem_before, 128);
+    TEST_ASSERT_NO_MEM_LEAK(allocs_before);
 
     /* Re-add lodepng decoder */
     lv_lodepng_init();

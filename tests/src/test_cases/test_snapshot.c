@@ -51,7 +51,7 @@ void test_snapshot_should_not_leak_memory(void)
     initial_available_memory = monitor.free_size;
 
     for(idx = 0; idx < NUM_SNAPSHOTS; idx++) {
-        snapshots[idx] = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_NATIVE_WITH_ALPHA);
+        snapshots[idx] = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_DEFAULT);
         TEST_ASSERT_NOT_NULL(snapshots[idx]);
     }
 
@@ -84,7 +84,7 @@ void test_snapshot_with_transform_should_not_leak_memory(void)
     initial_available_memory = monitor.free_size;
 
     for(idx = 0; idx < NUM_SNAPSHOTS; idx++) {
-        snapshots[idx] = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_NATIVE_WITH_ALPHA);
+        snapshots[idx] = lv_snapshot_take(lv_screen_active(), LV_COLOR_FORMAT_DEFAULT);
         TEST_ASSERT_NOT_NULL(snapshots[idx]);
     }
 
@@ -176,7 +176,7 @@ void test_snapshot_take_snapshot_multiple_widgets(void)
     lv_obj_set_style_border_width(obj_4, 0, 0);
     lv_obj_set_style_bg_color(obj_4, lv_color_hex3(0x0ff), 0);
     lv_obj_align(obj_4, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_add_flag(obj_4, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_hidden(obj_4, true);
 
     lv_obj_t * obj_5 = lv_obj_create(lv_screen_active());
     lv_obj_set_size(obj_5, 100, 100);
@@ -309,22 +309,6 @@ void test_snapshot_reshape_draw_buf_zero_size_object(void)
 
     /* Test reshape operation should fail */
     lv_result_t result = lv_snapshot_reshape_draw_buf(obj, draw_buf);
-    TEST_ASSERT_EQUAL(LV_RESULT_INVALID, result);
-
-    lv_draw_buf_destroy(draw_buf);
-}
-
-void test_snapshot_reshape_draw_buf_invalid_params(void)
-{
-    lv_obj_t * obj = lv_obj_create(lv_screen_active());
-    lv_obj_set_size(obj, 50, 40);
-
-    /* Create initial draw buffer */
-    lv_draw_buf_t * draw_buf = lv_draw_buf_create(50, 40, LV_COLOR_FORMAT_ARGB8888, LV_STRIDE_AUTO);
-    TEST_ASSERT_NOT_NULL(draw_buf);
-
-    /* Only test NULL buffer, not NULL object (function asserts obj != NULL internally) */
-    lv_result_t result = lv_snapshot_reshape_draw_buf(obj, NULL);
     TEST_ASSERT_EQUAL(LV_RESULT_INVALID, result);
 
     lv_draw_buf_destroy(draw_buf);
@@ -466,8 +450,9 @@ void test_snapshot_refresh_logic_edge_cases(void)
     TEST_ASSERT_NOT_NULL(draw_buf1);
 
     /* Verify screen snapshot size */
-    int32_t screen_w = lv_display_get_horizontal_resolution(NULL);
-    int32_t screen_h = lv_display_get_vertical_resolution(NULL);
+    lv_display_t * display = lv_display_get_default();
+    int32_t screen_w = lv_display_get_horizontal_resolution(display);
+    int32_t screen_h = lv_display_get_vertical_resolution(display);
     int32_t ext_size = lv_obj_get_ext_draw_size(lv_screen_active());
     TEST_ASSERT_EQUAL_UINT32(screen_w + ext_size * 2, draw_buf1->header.w);
     TEST_ASSERT_EQUAL_UINT32(screen_h + ext_size * 2, draw_buf1->header.h);
@@ -521,6 +506,68 @@ void test_snapshot_extreme_size_objects(void)
 
     lv_draw_buf_destroy(small_buf);
     lv_obj_delete(small_obj);
+}
+
+/* Regression test: rotated image with large bounding box must not
+ * cause heap-buffer-overflow in transform_argb8888.
+ *
+ * The bug: in img_draw_core, buf_h = MAX_BUF_SIZE / buf_stride.
+ * MAX_BUF_SIZE depends on _lv_refr_get_disp_refreshing(). When
+ * the refreshing display is small but the rotated image bounding
+ * box is large, buf_stride > MAX_BUF_SIZE, buf_h = 0, malloc(0),
+ * and OOB write in transform_argb8888.
+ *
+ * We reproduce this by temporarily shrinking the default display
+ * to 10x10 (making MAX_BUF_SIZE tiny), placing a large rotated
+ * image, and taking a snapshot. The snapshot renders into a large
+ * off-screen layer while MAX_BUF_SIZE stays small.
+ * Without fix: buf_h=0 -> infinite loop in img_draw_core.
+ * With fix: buf_h clamped to 1 -> completes normally. */
+void test_snapshot_rotated_large_bbox_no_overflow(void)
+{
+    /* This test shrinks the default display resolution, which the NanoVG headless
+     * test display (fixed-size FBO) does not support. */
+#if LV_USE_DRAW_NANOVG
+    TEST_PASS();
+#else
+    lv_display_t * disp = lv_display_get_default();
+
+    /* Save original resolution and shrink to 10x10.
+     *   MAX_BUF_SIZE = 4 * 10 * 4(ARGB8888) = 160 bytes
+     *
+     * A 200x200 image rotated 45° has bounding box ~283px.
+     *   buf_stride = 283 * 4 = 1132 >> 160 = MAX_BUF_SIZE
+     *   buf_h = 160 / 1132 = 0  (BUG without fix) */
+    int32_t orig_hor = lv_display_get_horizontal_resolution(disp);
+    int32_t orig_ver = lv_display_get_vertical_resolution(disp);
+    lv_display_set_resolution(disp, 10, 10);
+
+    /* Create a 200x200 ARGB8888 draw_buf as image source */
+    lv_draw_buf_t * src_buf = lv_draw_buf_create(200, 200, LV_COLOR_FORMAT_ARGB8888, 0);
+    TEST_ASSERT_NOT_NULL(src_buf);
+    lv_draw_buf_clear(src_buf, NULL);
+
+    /* Place a rotated image on the current screen */
+    lv_obj_t * img = lv_image_create(lv_screen_active());
+    lv_image_set_src(img, src_buf);
+    lv_image_set_rotation(img, 450);  /* 45 degrees */
+    lv_obj_center(img);
+    lv_obj_update_layout(img);
+
+    /* Take a snapshot. Internally snapshot sets this display as
+     * refreshing (small MAX_BUF_SIZE), but renders into a layer
+     * sized to the object's bounding box (~283x283).
+     * Without fix: buf_h=0 -> infinite loop.
+     * With fix: buf_h clamped to 1 -> safe. */
+    lv_draw_buf_t * snapshot = lv_snapshot_take(img, LV_COLOR_FORMAT_ARGB8888);
+    TEST_ASSERT_NOT_NULL(snapshot);
+
+    /* Cleanup and restore original resolution */
+    lv_draw_buf_destroy(snapshot);
+    lv_obj_delete(img);
+    lv_draw_buf_destroy(src_buf);
+    lv_display_set_resolution(disp, orig_hor, orig_ver);
+#endif /* LV_USE_DRAW_NANOVG */
 }
 
 #endif

@@ -121,8 +121,10 @@
             * RTOS task notifications can only be used when there is only one task that can be the recipient of the event.
             */
             #define LV_USE_FREERTOS_TASK_NOTIFY 1
-        #endif
 
+            /* Enable this to provide a custom implementation of lv_os_get_idle_percent. */
+            #define LV_OS_IDLE_PERCENT_CUSTOM 0
+        #endif
         /*========================
         * RENDERING CONFIGURATION
         *========================*/
@@ -382,6 +384,7 @@
 
         /* Enable assertion failures if an operation fails or invalid data is found.
         * If LV_USE_LOG is enabled, an error message will be printed on failure. */
+        #define LV_USE_ASSERT               1
         #define LV_USE_ASSERT_NULL          1   /**< Check if the parameter is NULL. (Very fast, recommended) */
         #define LV_USE_ASSERT_MALLOC        1   /**< Checks is the memory is successfully allocated or no. (Very fast, recommended) */
         #define LV_USE_ASSERT_STYLE         0   /**< Check if the styles are properly initialized. (Very fast, recommended) */
@@ -412,8 +415,8 @@
         * Others
         *-----------*/
 
-        #define LV_ENABLE_GLOBAL_CUSTOM 0
-        #if LV_ENABLE_GLOBAL_CUSTOM
+        #define LV_GLOBAL_USE_CUSTOM_INCLUDE 0
+        #if LV_GLOBAL_USE_CUSTOM_INCLUDE
             /** Header to include for custom 'lv_global' function" */
             #define LV_GLOBAL_CUSTOM_INCLUDE <stdint.h>
         #endif

@@ -31,14 +31,6 @@ void test_spangroup_create_returns_not_null_object(void)
     TEST_ASSERT(NULL != obj);
 }
 
-void test_spangroup_new_span_with_null_parameter_returns_null_object(void)
-{
-    lv_span_t * span = lv_spangroup_add_span(NULL);
-
-    TEST_ASSERT(NULL == span);
-    TEST_ASSERT_EQUAL_INT(0, lv_spangroup_get_span_count(spangroup));
-}
-
 void test_spangroup_new_span_with_valid_parameter_returns_not_null_object(void)
 {
     lv_span_t * span = lv_spangroup_add_span(spangroup);
@@ -66,17 +58,6 @@ void test_span_set_text(void)
     TEST_ASSERT_EQUAL_STRING(span->txt, test_text);
 }
 
-void test_span_set_text_with_bad_parameter_no_action_performed(void)
-{
-    const char * test_text = "Test Text";
-    lv_span_t * span = lv_spangroup_add_span(spangroup);
-
-    lv_span_set_text(span, test_text);
-    lv_span_set_text(span, NULL);
-
-    TEST_ASSERT_EQUAL_STRING(span->txt, test_text);
-}
-
 void test_span_set_text_with_previous_test_overwrites(void)
 {
     const char * old_test_text = "Old Test Text";
@@ -99,17 +80,6 @@ void test_span_set_text_static(void)
     TEST_ASSERT_EQUAL_STRING(span->txt, test_text);
 }
 
-void test_span_set_text_static_with_bad_parameter_no_action_performed(void)
-{
-    const char * test_text = "Test Text";
-    lv_span_t * span = lv_spangroup_add_span(spangroup);
-
-    lv_span_set_text_static(span, test_text);
-    lv_span_set_text_static(span, NULL);
-
-    TEST_ASSERT_EQUAL_STRING(span->txt, test_text);
-}
-
 void test_span_set_text_static_with_previous_text_overwrites(void)
 {
     const char * old_test_text = "Old Test Text";
@@ -123,10 +93,12 @@ void test_span_set_text_static_with_previous_text_overwrites(void)
 
 void test_spangroup_set_align(void)
 {
+    LV_DEPRECATIONS_IGNORE_BEGIN
     const lv_text_align_t align = LV_TEXT_ALIGN_CENTER;
     lv_spangroup_set_align(spangroup, align);
 
     TEST_ASSERT_EQUAL(align, lv_spangroup_get_align(spangroup));
+    LV_DEPRECATIONS_IGNORE_END
 }
 
 void test_spangroup_set_overflow(void)
@@ -156,6 +128,7 @@ void test_spangroup_set_indent(void)
 
 void test_spangroup_set_mode(void)
 {
+    LV_DEPRECATIONS_IGNORE_BEGIN
     lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_EXPAND);
     TEST_ASSERT_EQUAL(LV_SPAN_MODE_EXPAND, lv_spangroup_get_mode(spangroup));
 
@@ -164,13 +137,16 @@ void test_spangroup_set_mode(void)
 
     lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_FIXED);
     TEST_ASSERT_EQUAL(LV_SPAN_MODE_FIXED, lv_spangroup_get_mode(spangroup));
+    LV_DEPRECATIONS_IGNORE_END
 }
 
 void test_spangroup_set_mode_invalid_parameter_mode_not_changed(void)
 {
+    LV_DEPRECATIONS_IGNORE_BEGIN
     lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_EXPAND);
     lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_LAST);
     TEST_ASSERT_EQUAL(LV_SPAN_MODE_EXPAND, lv_spangroup_get_mode(spangroup));
+    LV_DEPRECATIONS_IGNORE_END
 }
 
 void test_spangroup_set_max_lines(void)
@@ -216,7 +192,7 @@ void test_spangroup_draw(void)
 {
     active_screen = lv_screen_active();
     spangroup = lv_spangroup_create(active_screen);
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_BREAK);
+    lv_obj_set_height(spangroup, LV_SIZE_CONTENT);
     lv_obj_set_width(spangroup, 100);
     lv_span_t * span_1 = lv_spangroup_add_span(spangroup);
     lv_span_set_text(span_1, "This text is over 100 pixels width");
@@ -229,15 +205,16 @@ void test_spangroup_draw(void)
 
     TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_02.png");
 
-    lv_spangroup_set_align(spangroup, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_style_text_align(spangroup, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
     TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_03.png");
 
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_EXPAND);
+    lv_obj_set_size(spangroup, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 
     TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_04.png");
 
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_FIXED);
+    lv_obj_set_width(spangroup, 100);
+    lv_obj_set_content_height(spangroup, 100);
 
     TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_05.png");
 }
@@ -324,8 +301,7 @@ void test_spangroup_chinese_break_line(void)
 
     active_screen = lv_screen_active();
     spangroup = lv_spangroup_create(active_screen);
-    lv_obj_set_size(spangroup, LV_PCT(100), LV_PCT(100));
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_BREAK);
+    lv_obj_set_size(spangroup, LV_PCT(100), LV_SIZE_CONTENT);
 
     lv_obj_set_style_text_font(spangroup, font, 0);
     lv_obj_set_style_border_width(spangroup, 2, 0);
@@ -388,7 +364,7 @@ void test_spangroup_get_span_coords(void)
     /* Set styles and properties for the span group */
     lv_obj_set_style_outline_width(spangroup, 1, 0);
     lv_spangroup_set_indent(spangroup, 20);
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_BREAK);
+    lv_obj_set_height(spangroup, LV_SIZE_CONTENT);
     lv_obj_set_width(spangroup, 300);
     lv_obj_set_style_pad_all(spangroup, 20, LV_PART_MAIN);
 
@@ -425,10 +401,10 @@ void test_spangroup_get_span_coords(void)
     /* Define expected coordinates for testing */
     const lv_span_coords_t test_coords[] = {
         {.heading = {.x1 = 40, .y1 = 20, .x2 = 280, .y2 = 20}, .middle = {.x1 = 40, .y1 = 20, .x2 = 241, .y2 = 36}, .trailing = {.x1 = 0, .y1 = 0, .x2 = 0, .y2 = 0}},
-        {.heading = {.x1 = 241, .y1 = 20, .x2 = 280, .y2 = 36}, .middle = {.x1 = 20, .y1 = 36, .x2 = 280, .y2 = 63}, .trailing = {.x1 = 20, .y1 = 63, .x2 = 155, .y2 = 90}},
-        {.heading = {.x1 = 155, .y1 = 63, .x2 = 280, .y2 = 90}, .middle = {.x1 = 20, .y1 = 90, .x2 = 280, .y2 = 90}, .trailing = {.x1 = 20, .y1 = 90, .x2 = 188, .y2 = 112}},
-        {.heading = {.x1 = 188, .y1 = 90, .x2 = 280, .y2 = 112}, .middle = {.x1 = 20, .y1 = 112, .x2 = 280, .y2 = 112}, .trailing = {.x1 = 20, .y1 = 112, .x2 = 116, .y2 = 134}},
-        {.heading = {.x1 = 116, .y1 = 112, .x2 = 280, .y2 = 134}, .middle = {.x1 = 20, .y1 = 134, .x2 = 280, .y2 = 134}, .trailing = {.x1 = 20, .y1 = 134, .x2 = 160, .y2 = 150}}
+        {.heading = {.x1 = 241, .y1 = 20, .x2 = 280, .y2 = 36}, .middle = {.x1 = 20, .y1 = 36, .x2 = 280, .y2 = 63}, .trailing = {.x1 = 20, .y1 = 63, .x2 = 106, .y2 = 90}},
+        {.heading = {.x1 = 106, .y1 = 63, .x2 = 280, .y2 = 90}, .middle = {.x1 = 20, .y1 = 90, .x2 = 280, .y2 = 90}, .trailing = {.x1 = 20, .y1 = 90, .x2 = 135, .y2 = 112}},
+        {.heading = {.x1 = 135, .y1 = 90, .x2 = 280, .y2 = 112}, .middle = {.x1 = 20, .y1 = 112, .x2 = 280, .y2 = 112}, .trailing = {.x1 = 20, .y1 = 112, .x2 = 84, .y2 = 134}},
+        {.heading = {.x1 = 84, .y1 = 112, .x2 = 280, .y2 = 134}, .middle = {.x1 = 20, .y1 = 134, .x2 = 280, .y2 = 134}, .trailing = {.x1 = 20, .y1 = 134, .x2 = 118, .y2 = 150}}
     };
 
     /* Define colors for visual testing */
@@ -489,7 +465,7 @@ void test_spangroup_set_right_align_on_overflow(void)
     lv_obj_set_width(spangroup, 180);
     lv_obj_set_height(spangroup, 30);
 
-    lv_spangroup_set_align(spangroup, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_style_text_align(spangroup, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN);
 
     lv_span_t * span = lv_spangroup_add_span(spangroup);
     lv_span_set_text_static(span, "China is a beautiful country.");
@@ -527,7 +503,7 @@ void test_spangroup_rtl_mode_set_left_align(void)
     lv_obj_set_style_text_font(spangroup, &lv_font_dejavu_16_persian_hebrew, 0);
     lv_obj_set_style_base_dir(spangroup, LV_BASE_DIR_RTL, 0);
     lv_obj_set_size(spangroup, 300, lv_font_dejavu_16_persian_hebrew.line_height);
-    lv_spangroup_set_align(spangroup, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_style_text_align(spangroup, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
 
     lv_span_t * span = lv_spangroup_add_span(spangroup);
     lv_span_set_text_static(span, message);
@@ -546,7 +522,7 @@ void test_spangroup_rtl_mode_set_center_align(void)
     lv_obj_set_style_text_font(spangroup, &lv_font_dejavu_16_persian_hebrew, 0);
     lv_obj_set_style_base_dir(spangroup, LV_BASE_DIR_RTL, 0);
     lv_obj_set_size(spangroup, 300, lv_font_dejavu_16_persian_hebrew.line_height);
-    lv_spangroup_set_align(spangroup, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_style_text_align(spangroup, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
     lv_span_t * span = lv_spangroup_add_span(spangroup);
     lv_span_set_text_static(span, message);
@@ -571,9 +547,8 @@ void test_spangroup_set_line_space(void)
     active_screen = lv_screen_active();
     spangroup = lv_spangroup_create(active_screen);
     lv_obj_set_y(spangroup, -26);
-    lv_obj_set_width(spangroup, 300);
+    lv_obj_set_size(spangroup, 300, LV_SIZE_CONTENT);
     lv_obj_set_style_border_width(spangroup, 2, 0);
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_BREAK);
     lv_obj_set_style_text_line_space(spangroup, 2, 0);
     lv_obj_set_style_text_font(spangroup, font, 0);
 
@@ -642,6 +617,130 @@ void test_span_properties(void)
 
     lv_obj_delete(obj);
 #endif
+}
+
+/*
+ * Ellipsis should not appear when all text fits horizontally but max-height is smaller than font line_height.
+ */
+#if LV_USE_FREETYPE && __WORDSIZE == 64
+
+void test_spangroup_ellipsis_not_shown_when_text_fits(void)
+{
+    lv_font_t * font = lv_freetype_font_create("src/test_files/fonts/noto/NotoSansSC-Regular.ttf",
+                                               LV_FREETYPE_FONT_RENDER_MODE_BITMAP, 24, LV_FREETYPE_FONT_STYLE_NORMAL);
+    if(!font) {
+        LV_LOG_ERROR("freetype font create failed.");
+        TEST_FAIL();
+    }
+
+    int32_t font_h = lv_font_get_line_height(font);
+    int32_t constrained_h = font_h - 2;  /* ensure max-height < line_height */
+
+    active_screen = lv_screen_active();
+
+    /* Case 1: width = text width, text fits — no ellipsis expected */
+    lv_obj_t * spangroup1 = lv_spangroup_create(active_screen);
+    lv_obj_set_style_text_font(spangroup1, font, 0);
+    lv_obj_set_style_outline_width(spangroup1, 1, 0);
+    lv_spangroup_set_overflow(spangroup1, LV_SPAN_OVERFLOW_ELLIPSIS);
+    lv_obj_set_height(spangroup1, LV_SIZE_CONTENT);
+
+    lv_span_t * span1 = lv_spangroup_add_span(spangroup1);
+    lv_span_set_text(span1, "消息免打扰");
+
+    /* Set width to exactly fit the text, like CSS width: fit-content */
+    uint32_t text_w1 = lv_spangroup_get_expand_width(spangroup1, UINT32_MAX);
+    lv_obj_set_width(spangroup1, text_w1);
+    lv_obj_set_style_max_height(spangroup1, constrained_h, 0);
+
+    /* Case 2: text overflows width — ellipsis expected */
+    lv_obj_t * spangroup2 = lv_spangroup_create(active_screen);
+    lv_obj_set_style_text_font(spangroup2, font, 0);
+    lv_obj_set_style_outline_width(spangroup2, 1, 0);
+    lv_spangroup_set_overflow(spangroup2, LV_SPAN_OVERFLOW_ELLIPSIS);
+    lv_obj_set_height(spangroup2, LV_SIZE_CONTENT);
+
+    lv_obj_set_y(spangroup2, 40);
+    lv_obj_set_width(spangroup2, 250);
+    lv_obj_set_style_max_height(spangroup2, constrained_h, 0);
+
+    lv_span_t * span2 = lv_spangroup_add_span(spangroup2);
+    lv_span_set_text(span2, "这是一段很长的中文文字用来测试文本溢出省略号的显示效果");
+
+    TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_16.png");
+
+    lv_obj_set_style_text_font(spangroup1, LV_FONT_DEFAULT, 0);
+    lv_obj_set_style_text_font(spangroup2, LV_FONT_DEFAULT, 0);
+    lv_freetype_font_delete(font);
+}
+
+#else
+
+void test_spangroup_ellipsis_not_shown_when_text_fits(void)
+{
+}
+
+#endif
+
+
+/* Text wraps to 3+ lines, max-height fits 2 — ellipsis on last visible line */
+void test_spangroup_ellipsis_multiline_truncated(void)
+{
+    active_screen = lv_screen_active();
+    spangroup = lv_spangroup_create(active_screen);
+
+    int32_t line_h = lv_font_get_line_height(LV_FONT_DEFAULT);
+
+    lv_obj_set_style_outline_width(spangroup, 1, 0);
+    lv_obj_set_size(spangroup, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_max_height(spangroup, line_h * 2, 0);
+    lv_spangroup_set_overflow(spangroup, LV_SPAN_OVERFLOW_ELLIPSIS);
+
+    lv_span_t * span = lv_spangroup_add_span(spangroup);
+    lv_span_set_text(span, "This text is long enough to wrap into three or more lines in a 100px container");
+
+    TEST_ASSERT_EQUAL_SCREENSHOT("widgets/span_17.png");
+}
+
+/**
+ * Issue #10493: white space hangs only where the line actually breaks. A space
+ * which ends a span in the middle of a line is really used, so the next span
+ * has to start after it. lv_text_get_next_line() cannot see the next span, so
+ * it only lets the space hang when the line was broken by wrapping.
+ */
+void test_spangroup_keeps_the_space_which_ends_a_span(void)
+{
+    active_screen = lv_screen_active();
+
+    /*Wide enough that both spans land on the same line*/
+    lv_obj_t * with_space = lv_spangroup_create(active_screen);
+    lv_obj_set_width(with_space, 400);
+    lv_obj_set_height(with_space, LV_SIZE_CONTENT);
+    lv_span_set_text(lv_spangroup_add_span(with_space), "The quick brown fox. ");
+    lv_span_t * tail_after_space = lv_spangroup_add_span(with_space);
+    lv_span_set_text(tail_after_space, "abcdefghijklmn");
+    lv_spangroup_refresh(with_space);
+
+    lv_obj_t * without_space = lv_spangroup_create(active_screen);
+    lv_obj_set_width(without_space, 400);
+    lv_obj_set_height(without_space, LV_SIZE_CONTENT);
+    lv_span_set_text(lv_spangroup_add_span(without_space), "The quick brown fox.");
+    lv_span_t * tail_no_space = lv_spangroup_add_span(without_space);
+    lv_span_set_text(tail_no_space, "abcdefghijklmn");
+    lv_spangroup_refresh(without_space);
+
+    lv_obj_update_layout(active_screen);
+
+    const int32_t after_space = lv_spangroup_get_span_coords(with_space, tail_after_space).heading.x1;
+    const int32_t no_space = lv_spangroup_get_span_coords(without_space, tail_no_space).heading.x1;
+
+    /*The two spans must not run together: the second one starts one space later*/
+    const lv_font_t * font = lv_obj_get_style_text_font(with_space, LV_PART_MAIN);
+    const int32_t space_w = lv_font_get_glyph_width(font, ' ', 'a');
+    TEST_ASSERT_EQUAL(no_space + space_w, after_space);
+
+    lv_obj_delete(with_space);
+    lv_obj_delete(without_space);
 }
 
 #endif
