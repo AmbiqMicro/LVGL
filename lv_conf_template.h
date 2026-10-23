@@ -2146,11 +2146,11 @@
 
 #endif /*LV_USE_PERF_MONITOR*/
 
-#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN
+#if LV_USE_BUILTIN_MALLOC || LV_USE_CUSTOM_MALLOC
 /** Show the used memory and the memory fragmentation in a label on the screen. */
 #define LV_USE_MEM_MONITOR 0
 
-#endif /*LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN*/
+#endif /*LV_USE_BUILTIN_MALLOC || LV_USE_CUSTOM_MALLOC*/
 
 #if LV_USE_MEM_MONITOR
 /** Memory monitor position

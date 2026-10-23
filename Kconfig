@@ -3299,7 +3299,8 @@ config LV_USE_PERF_MONITOR_LOG_MODE
 config LV_USE_MEM_MONITOR
 	bool "Memory monitor"
 	default n
-	depends on LV_USE_BUILTIN_MALLOC
+	# Ambiq: a custom allocator can provide lv_mem_monitor_core() too (lvgl_ambiq_porting/am_mem.c)
+	depends on LV_USE_BUILTIN_MALLOC || LV_USE_CUSTOM_MALLOC
 	help
 		Show the used memory and the memory fragmentation in a label on the screen.
 
