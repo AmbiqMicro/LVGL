@@ -373,10 +373,8 @@ lv_result_t lv_draw_ambiq_common_start(const lv_draw_buf_t * buf_dsc, const lv_a
     }
 
     lv_area_t clip_area;
+    /*Fails only when the intersection is empty: a 1 px wide or tall clip is valid*/
     if(!lv_area_intersect(&clip_area, clip_area_raw, &buf_area))
-        return LV_RESULT_INVALID;
-
-    if((clip_area.x2 - clip_area.x1 <= 0) || (clip_area.y2 - clip_area.y1 <= 0))
         return LV_RESULT_INVALID;
 
     // Check the buffer setting
