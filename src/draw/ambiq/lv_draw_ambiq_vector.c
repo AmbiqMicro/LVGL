@@ -379,7 +379,7 @@ static void lv_vector_image_to_nema(NEMA_VG_PAINT_HANDLE vg_paint,
 }
 
 static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_HANDLE vg_grad,
-                                    const lv_vector_fill_dsc_t * dsc)
+                                    const lv_vector_fill_dsc_t * dsc, lv_opa_t layer_opa)
 {
     /*clear paint*/
     nema_vg_paint_clear(vg_paint);
@@ -388,8 +388,8 @@ static void lv_vector_paint_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_
     uint32_t file_rule = lv_vector_fill_rule_to_nema(dsc->fill_rule);
     nema_vg_set_fill_rule(file_rule);
 
-    /*set paint opacity*/
-    nema_vg_paint_set_opacity(vg_paint, ((float)dsc->opa) / 255.f);
+    /*set paint opacity, including the layer's (vector descriptors do not mix it in)*/
+    nema_vg_paint_set_opacity(vg_paint, ((float)dsc->opa * layer_opa) / (255.f * 255.f));
 
     if(dsc->style == LV_VECTOR_DRAW_STYLE_SOLID) {
         nema_vg_paint_set_type(vg_paint, NEMA_VG_PAINT_COLOR);
@@ -492,7 +492,7 @@ static uint8_t lv_vector_stroke_join_to_nema(lv_vector_stroke_join_t join)
 }
 
 static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD_HANDLE vg_grad,
-                                     const lv_vector_stroke_dsc_t * dsc)
+                                     const lv_vector_stroke_dsc_t * dsc, lv_opa_t layer_opa)
 {
     /*clear paint*/
     nema_vg_paint_clear(vg_paint);
@@ -500,8 +500,8 @@ static void lv_vector_stroke_to_nema(NEMA_VG_PAINT_HANDLE vg_paint, NEMA_VG_GRAD
     /* set fill rule*/
     nema_vg_set_fill_rule(NEMA_VG_STROKE);
 
-    /*set paint opacity*/
-    nema_vg_paint_set_opacity(vg_paint, ((float)dsc->opa) / 255.f);
+    /*set paint opacity, including the layer's (vector descriptors do not mix it in)*/
+    nema_vg_paint_set_opacity(vg_paint, ((float)dsc->opa * layer_opa) / (255.f * 255.f));
 
     /*set stroke width*/
     nema_vg_stroke_set_width(dsc->width);
@@ -616,13 +616,13 @@ static void task_draw_cb(void * ctx, const lv_vector_path_t * path, const lv_vec
 
     /* fill  */
     if(dsc->fill_dsc.opa != LV_OPA_TRANSP) {
-        lv_vector_paint_to_nema(unit->vg_paint, unit->vg_grad, &dsc->fill_dsc);
+        lv_vector_paint_to_nema(unit->vg_paint, unit->vg_grad, &dsc->fill_dsc, t->opa);
         nema_vg_draw_path(unit->vg_path, unit->vg_paint);
     }
 
     /* draw stroke */
     if(dsc->stroke_dsc.opa != LV_OPA_TRANSP) {
-        lv_vector_stroke_to_nema(unit->vg_paint, unit->vg_grad, &dsc->stroke_dsc);
+        lv_vector_stroke_to_nema(unit->vg_paint, unit->vg_grad, &dsc->stroke_dsc, t->opa);
         nema_vg_draw_path(unit->vg_path, unit->vg_paint);
     }
 
