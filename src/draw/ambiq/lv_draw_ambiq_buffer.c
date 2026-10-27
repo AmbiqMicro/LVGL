@@ -267,6 +267,8 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
     nema_blit_subrect(start_x_dest, start_y_dest, line_width_src, line_height_src, start_x_src, start_y_src);
 
 
+    /*The blit above copied the pixels. Only a format with a second plane (RGB565A8's
+     *alpha) or a palette (indexed, whole buffer) needs a second pass.*/
     if(dest_header->cf == LV_COLOR_FORMAT_RGB565A8) {
         nema_bind_tex(NEMA_TEX2, (uintptr_t)dest->data + dest_header->w * dest_header->h * 2, dest_header->w, dest_header->h,
                       NEMA_A8, dest_header->stride / 2, 0);
@@ -282,9 +284,6 @@ static void lv_draw_ambiq_buffer_copy(lv_draw_buf_t * dest, const lv_area_t * de
         nema_bind_tex(NEMA_TEX1, (uintptr_t)src->data, palette_size, 1, NEMA_BGRA8888, -1, NEMA_FILTER_PS);
         lv_ambiq_blend_mode_change(NULL, NEMA_BL_SRC, NEMA_TEX2, NEMA_TEX1, NEMA_NOTEX, false);
         nema_blit(0, 0);
-    }
-    else {
-        LV_ASSERT_MSG(false, "Should never come to this!");
     }
 
     lv_draw_ambiq_common_end(true);
