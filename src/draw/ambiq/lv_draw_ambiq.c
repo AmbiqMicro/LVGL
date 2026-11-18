@@ -48,6 +48,7 @@
 #include "lv_draw_ambiq.h"
 #include "lv_draw_ambiq_private.h"
 #include "../lv_draw_image_private.h"
+#include "../lv_image_decoder.h"
 #include "../../stdlib/lv_string.h"
 #include "../../core/lv_global.h"
 
@@ -252,6 +253,19 @@ static inline void execute_drawing_unit(lv_draw_task_t * t)
     lv_draw_dispatch_request();
 }
 
+/* The GPU applies a bitmap mask only if it is as large as the texture it is
+ * applied to (see lv_draw_ambiq_image_core()); otherwise it draws unmasked.
+ * Leave those draws to the software renderer. */
+static bool mask_fits_texture(const lv_draw_image_dsc_t * dsc, int32_t tex_w, int32_t tex_h)
+{
+    if(dsc->bitmap_mask_src == NULL) return true;
+
+    lv_image_header_t mask_header;
+    if(lv_image_decoder_get_info(dsc->bitmap_mask_src, &mask_header) != LV_RESULT_OK) return false;
+
+    return (int32_t)mask_header.w == tex_w && (int32_t)mask_header.h == tex_h;
+}
+
 static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
 {
     LV_UNUSED(draw_unit);
@@ -307,10 +321,19 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
             break;
 
-        case LV_DRAW_TASK_TYPE_LAYER:
-            task->preference_score = 10;
-            task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
-            break;
+        case LV_DRAW_TASK_TYPE_LAYER: {
+                const lv_draw_image_dsc_t * draw_dsc_layer = task->draw_dsc;
+                const lv_layer_t * layer_src = draw_dsc_layer->src;
+
+                if(!mask_fits_texture(draw_dsc_layer, lv_area_get_width(&layer_src->buf_area),
+                                      lv_area_get_height(&layer_src->buf_area))) {
+                    return 0;
+                }
+
+                task->preference_score = 10;
+                task->preferred_draw_unit_id = DRAW_UNIT_ID_AMBIQ;
+                break;
+            }
 
         case LV_DRAW_TASK_TYPE_IMAGE:
             lv_draw_image_dsc_t * draw_dsc_image = task->draw_dsc;
@@ -323,6 +346,10 @@ static int32_t evaluate(lv_draw_unit_t * draw_unit, lv_draw_task_t * task)
             //Set blend mode
             if((draw_dsc_image->blend_mode == LV_BLEND_MODE_SUBTRACTIVE) ||
                (draw_dsc_image->blend_mode == LV_BLEND_MODE_MULTIPLY)) {
+                return 0;
+            }
+
+            if(!mask_fits_texture(draw_dsc_image, draw_dsc_image->header.w, draw_dsc_image->header.h)) {
                 return 0;
             }
 

@@ -96,6 +96,7 @@ void lv_draw_ambiq_layer(lv_draw_task_t * t, const lv_draw_image_dsc_t * draw_ds
 
     lv_draw_image_dsc_t new_draw_dsc = *draw_dsc;
     new_draw_dsc.src = layer_to_draw->draw_buf;
+    new_draw_dsc.header = layer_to_draw->draw_buf->header;
     lv_draw_ambiq_image(t, &new_draw_dsc, coords);
 }
 
